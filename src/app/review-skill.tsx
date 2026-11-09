@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
-import { View } from 'react-native';
+import { Image, View } from 'react-native';
+import { AdminNotes } from '../components/AdminNotes';
 import { showMessage } from '../components/domain';
 import { Avatar, Banner, Button, Card, Chip, Field, Icon, KeyValue, Row, Screen, Section, Stars, Txt } from '../components/ui';
 import { category } from '../data/categories';
@@ -76,6 +77,13 @@ export default function ReviewSkill() {
       {cat.risk === 'high' ? (
         <Section title="High-risk trade">
           <Banner tone="warning" body="Confirm the worker holds a valid certificate/licence for this trade (e.g. COREN, NABTEB, trade test) before approving." />
+          {skill?.certificate ? (
+            <Image source={{ uri: skill.certificate.uri }} style={{ width: '100%', height: 180, borderRadius: radius.md, marginTop: space.sm }} resizeMode="contain" />
+          ) : (
+            <Txt v="small" color={c.danger} style={{ marginTop: 6 }}>
+              No certificate photo uploaded yet — ask for one with “Need another video”.
+            </Txt>
+          )}
           <Row style={{ marginTop: space.sm }}>
             <Chip label={cert ? 'Certificate checked ✓' : 'Mark certificate checked'} selected={cert} onPress={() => setCert(!cert)} />
           </Row>
@@ -87,6 +95,7 @@ export default function ReviewSkill() {
           Quality affects ranking for this skill.
         </Txt>
       </Section>
+      <AdminNotes targetType="user" targetId={artisanId} />
       <Section title="Note to artisan">
         <Field multiline value={note} onChangeText={setNote} placeholder="Required when rejecting or asking for another video." />
         <Txt v="small" color={c.textMuted}>

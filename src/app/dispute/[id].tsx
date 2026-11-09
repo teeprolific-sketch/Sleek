@@ -20,6 +20,7 @@ export default function DisputeScreen() {
   const session = useStore((s) => s.session);
   const openDispute = useStore((s) => s.openDispute);
   const respondDispute = useStore((s) => s.respondDispute);
+  const addDisputeEvidence = useStore((s) => s.addDisputeEvidence);
   const logCapture = useStore((s) => s.logCapture);
   const [reason, setReason] = useState<DisputeReason>('poor_quality');
   const [details, setDetails] = useState('');
@@ -77,13 +78,24 @@ export default function DisputeScreen() {
           <KeyValue k="Opened" v={`${day(dispute.openedAt)} ${time(dispute.openedAt)}`} />
           <KeyValue k="Escrow" v={`${naira(job.escrow.amount)} ${dispute.status === 'resolved' ? '' : '(frozen)'}`} />
           <Txt style={{ marginTop: space.sm }}>{dispute.details}</Txt>
-          {dispute.evidence.length ? (
-            <ScrollView horizontal style={{ marginTop: space.sm }} contentContainerStyle={{ gap: 8 }}>
-              {dispute.evidence.map((p) => (
-                <Image key={p.id} source={{ uri: p.uri }} style={{ width: 80, height: 80, borderRadius: radius.sm }} />
-              ))}
-            </ScrollView>
-          ) : null}
+          <ScrollView horizontal style={{ marginTop: space.sm }} contentContainerStyle={{ gap: 8 }}>
+            {dispute.evidence.map((p) => (
+              <Image key={p.id} source={{ uri: p.uri }} style={{ width: 80, height: 80, borderRadius: radius.sm }} />
+            ))}
+            {dispute.status !== 'resolved' ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Add evidence photo"
+                onPress={() => requestCapture('dispute_evidence', (uri) => { const r = addDisputeEvidence(dispute.id, logCapture('dispute_evidence', uri, job.id)); if (!r.ok) showMessage('Not added', r.error); }, job.id)}
+                style={{ width: 80, height: 80, borderRadius: radius.sm, borderWidth: 1, borderStyle: 'dashed', borderColor: c.primary, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Icon name="add" color={c.primary} />
+                <Txt v="tiny" color={c.primary}>
+                  Add photo
+                </Txt>
+              </Pressable>
+            ) : null}
+          </ScrollView>
         </Card>
       </Section>
       {dispute.artisanResponse ? (

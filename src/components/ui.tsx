@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { StatusTone } from '../domain/escrow';
+import { NetworkBanner } from './feedback';
 import { font, radius, space, useTheme, type Palette } from '../theme';
 import { initials } from '../utils/format';
 
@@ -112,6 +113,7 @@ export function Screen({
           {right}
         </View>
       )}
+      <NetworkBanner />
       <View style={{ flex: 1 }}>{body}</View>
       {footer ? <View style={[styles.footer, { borderTopColor: c.border, backgroundColor: c.bg }]}>{footer}</View> : null}
     </SafeAreaView>

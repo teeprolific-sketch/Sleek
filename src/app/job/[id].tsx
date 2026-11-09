@@ -1,41 +1,42 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Image, ScrollView, View } from 'react-native';
+import { useShallow } from 'zustand/react/shallow';
 import { confirmAction, JobStatusPill, showMessage } from '../../components/domain';
-import { Avatar, Banner, Button, Card, Divider, Field, Icon, KeyValue, Row, Screen, Section, Steps, Txt } from '../../components/ui';
+import { AutoReleaseCountdown, CoachTip, EscrowBadge } from '../../components/feedback';
+import { JobTimeline, rebook, SafetyButton } from '../../components/jobParts';
+import { Avatar, Banner, Button, Card, Chip, Divider, Field, Icon, KeyValue, Row, Screen, Section, Stars, Txt } from '../../components/ui';
 import { category } from '../../data/categories';
 import { freeWorkersFor } from '../../domain/availability';
-import { AUTO_RELEASE_HOURS, canStart, isLocationDisclosed, quoteCancellation } from '../../domain/escrow';
+import { customerBadge, customerScore } from '../../domain/customerRating';
+import { canStart, isLocationDisclosed, quoteCancellation } from '../../domain/escrow';
+import { canRequestExtension, EXTENSION_OPTIONS_MIN, pendingExtension } from '../../domain/extensions';
+import { PROTECTION_DAYS, protectionCover, protectionEligible, protectionWindow } from '../../domain/protection';
+import { canMarkEnRoute } from '../../domain/timeline';
+import { canTip } from '../../domain/tips';
 import type { Job } from '../../domain/types';
-import { useShallow } from 'zustand/react/shallow';
+import { useT } from '../../i18n';
 import { useJob, useStore } from '../../store';
 import { radius, space, useTheme } from '../../theme';
-import { countdown, day, naira, time, windowLabel } from '../../utils/format';
-
-const STEP_INDEX: Record<Job['status'], number> = {
-  requested: 0,
-  price_agreed: 1,
-  funded: 2,
-  in_progress: 3,
-  proof_submitted: 4,
-  completed: 5,
-  disputed: 4,
-  resolved: 5,
-  cancelled: 0,
-  declined: 0,
-};
+import { day, naira, time, windowLabel } from '../../utils/format';
 
 export default function JobDetail() {
   const { c } = useTheme();
+  const t = useT();
   const { id } = useLocalSearchParams<{ id: string }>();
   const job = useJob(id);
   const session = useStore((s) => s.session);
   const artisan = useStore((s) => s.artisans.find((a) => a.id === job?.artisanId));
   const customer = useStore((s) => s.customers.find((x) => x.id === job?.customerId));
   const jobs = useStore((s) => s.jobs);
-  const actions = useStore(useShallow((s) => ({ startJob: s.startJob, cancelJob: s.cancelJob, declineJob: s.declineJob, assignWorker: s.assignWorker })));
+  const actions = useStore(
+    useShallow((s) => ({ startJob: s.startJob, cancelJob: s.cancelJob, declineJob: s.declineJob, assignWorker: s.assignWorker, markEnRoute: s.markEnRoute, requestExtension: s.requestExtension, decideExtension: s.decideExtension })),
+  );
   const [reason, setReason] = useState('');
   const [showCancel, setShowCancel] = useState(false);
+  const [extMin, setExtMin] = useState(60);
+  const [extReason, setExtReason] = useState('');
+  const [showExt, setShowExt] = useState(false);
 
   const freeWorkers = useMemo(() => (job && artisan ? freeWorkersFor(jobs.filter((j) => j.id !== job.id), artisan, job.categoryId, job.window) : []), [jobs, job, artisan]);
 
@@ -46,6 +47,12 @@ export default function JobDetail() {
   const worker = artisan.workers.find((w) => w.id === job.workerId);
   const quote = quoteCancellation(job, party, now);
   const isTeam = artisan.accountType !== 'individual' && artisan.workers.length > 0;
+  const active = ['funded', 'in_progress', 'proof_submitted', 'disputed'].includes(job.status);
+  const closed = ['completed', 'resolved', 'cancelled', 'declined'].includes(job.status);
+  const pendingExt = pendingExtension(job);
+  const prot = protectionEligible(job, artisan, category(job.categoryId), now);
+  const protWin = protectionWindow(job);
+  const custScore = customerScore(customer.customerStats);
 
   const run = (r: { ok: boolean; error?: string }) => {
     if (!r.ok) showMessage('Not possible', r.error);
@@ -59,43 +66,162 @@ export default function JobDetail() {
   };
 
   return (
-    <Screen title={job.title} subtitle={`${category(job.categoryId).name} · Ref ${job.id.slice(-6).toUpperCase()}`} right={<JobStatusPill status={job.status} />}>
-      {job.status === 'cancelled' || job.status === 'declined' ? (
-        <Banner tone="neutral" title={job.status === 'cancelled' ? 'Cancelled' : 'Declined'} body={job.cancellation ? `By ${job.cancellation.by}: ${job.cancellation.reason}. Refund: ${naira(job.cancellation.refundAmount)}${job.cancellation.artisanCompensation ? `, artisan compensation ${naira(job.cancellation.artisanCompensation)}` : ''}.` : 'No payment was taken.'} />
-      ) : (
-        <Card>
-          <Steps current={STEP_INDEX[job.status]} steps={['Request & chat', 'Price locked', 'Escrow funded', 'Work in progress', job.status === 'disputed' ? 'In dispute — Sleek reviewing' : 'Proof of work review', 'Payment released']} />
-        </Card>
-      )}
+    <Screen
+      title={job.title}
+      subtitle={`${category(job.categoryId).name} · Ref ${job.id.slice(-6).toUpperCase()}`}
+      right={active && disclosed ? <SafetyButton job={job} compact /> : <JobStatusPill status={job.status} />}
+    >
+      <Row style={{ justifyContent: 'space-between' }}>
+        <EscrowBadge job={job} />
+        {active && disclosed ? <JobStatusPill status={job.status} /> : null}
+      </Row>
+      {prot.eligible && !['cancelled', 'declined'].includes(job.status) ? (
+        <Row gap={6} style={{ marginTop: space.sm }}>
+          <Icon name="ribbon-outline" size={14} color={c.primary} />
+          <Txt v="small" color={c.primary} style={{ fontWeight: '700' }}>
+            Sleek Protection · {PROTECTION_DAYS}-day guarantee up to {naira(protectionCover(job))}
+          </Txt>
+        </Row>
+      ) : null}
 
       {/* Primary next action */}
       <View style={{ marginTop: space.lg, gap: space.sm }}>
+        {job.status === 'proof_submitted' ? <AutoReleaseCountdown job={job} /> : null}
         {party === 'customer' && job.status === 'price_agreed' ? <Button title={`Pay ${naira(job.pricePool.locked!.amount)} into escrow`} icon="lock-closed" onPress={() => router.push({ pathname: '/escrow/[id]', params: { id: job.id } })} /> : null}
         {party === 'customer' && job.status === 'proof_submitted' ? <Button title="Review proof of work" icon="images-outline" onPress={() => router.push({ pathname: '/proof/[id]', params: { id: job.id } })} /> : null}
-        {party === 'customer' && (job.status === 'completed' || job.status === 'resolved') && !job.reviewId ? <Button title="Rate this job" icon="star-outline" onPress={() => router.push({ pathname: '/review/[id]', params: { id: job.id } })} /> : null}
+        {party === 'customer' && closed && job.status !== 'declined' && !job.reviewId && job.status !== 'cancelled' ? <Button title="Rate this job" icon="star-outline" onPress={() => router.push({ pathname: '/review/[id]', params: { id: job.id } })} /> : null}
+        {party === 'artisan' && job.status === 'funded' && !job.enRouteAt ? (
+          <Button variant={canMarkEnRoute(job, now) ? 'primary' : 'secondary'} title="I’m on my way" icon="navigate-outline" disabled={!canMarkEnRoute(job, now)} onPress={() => run(actions.markEnRoute(job.id))} />
+        ) : null}
         {party === 'artisan' && job.status === 'funded' ? (
-          <Button title={canStart(job, now) ? 'Start job now' : `Starts ${day(job.window.start)} ${time(job.window.start)}`} icon="play-outline" disabled={!canStart(job, now) || (isTeam && !job.workerId)} onPress={() => run(actions.startJob(job.id))} />
+          <Button title={canStart(job, now) ? 'Start job now' : `Starts ${day(job.window.start)} ${time(job.window.start)}`} icon="play-outline" variant={job.enRouteAt || !canMarkEnRoute(job, now) ? 'primary' : 'ghost'} disabled={!canStart(job, now) || (isTeam && !job.workerId)} onPress={() => run(actions.startJob(job.id))} />
         ) : null}
         {party === 'artisan' && job.status === 'in_progress' ? <Button title="Upload proof of work" icon="cloud-upload-outline" onPress={() => router.push({ pathname: '/proof-upload/[id]', params: { id: job.id } })} /> : null}
+        {party === 'artisan' && closed && job.status !== 'declined' && job.status !== 'cancelled' && !job.customerReviewId ? <Button variant="secondary" title="Rate this customer" icon="person-outline" onPress={() => router.push({ pathname: '/rate-customer/[id]', params: { id: job.id } })} /> : null}
         {job.status === 'disputed' || job.disputeId ? <Button variant="secondary" title="View dispute" icon="flag-outline" onPress={() => router.push({ pathname: '/dispute/[id]', params: { id: job.id } })} /> : null}
         <Button variant="ghost" title="Open chat" icon="chatbubbles-outline" onPress={() => router.push({ pathname: '/chat/[id]', params: { id: job.id } })} />
+        {party === 'customer' && closed ? <Button variant="ghost" title={`Book ${artisan.businessName ?? artisan.name.split(' ')[0]} again`} icon="repeat-outline" onPress={() => rebook(job)} /> : null}
       </View>
 
-      {party === 'artisan' && job.status === 'proof_submitted' && job.proof ? (
-        <View style={{ marginTop: space.md }}>
-          <Banner tone="warning" icon="hourglass-outline" title="Waiting for customer approval" body={`If the customer doesn’t respond, payment is auto-released in ${countdown(job.proof.autoReleaseAt, now)}.`} />
-        </View>
+      {/* More time: artisan asks, customer decides */}
+      {pendingExt ? (
+        <Card style={{ marginTop: space.md, borderColor: c.warning, borderWidth: 2 }}>
+          <Row gap={6}>
+            <Icon name="time-outline" color={c.warning} />
+            <Txt v="bodyStrong">{party === 'customer' ? 'Your artisan needs more time' : 'Waiting for the customer'}</Txt>
+          </Row>
+          <Txt style={{ marginTop: 4 }}>
+            +{pendingExt.extraMinutes} min — “{pendingExt.reason}”. New finish: {time(pendingExt.newEnd)}.
+          </Txt>
+          {party === 'customer' ? (
+            <Row gap={space.sm} style={{ marginTop: space.md }}>
+              <Button small full={false} variant="ghost" title="Decline" style={{ flex: 1 }} onPress={() => run(actions.decideExtension(job.id, false))} />
+              <Button small full={false} title="Approve" icon="checkmark" style={{ flex: 1 }} onPress={() => run(actions.decideExtension(job.id, true))} />
+            </Row>
+          ) : null}
+          <Txt v="tiny" muted style={{ marginTop: 6 }}>
+            THE PRICE STAYS THE SAME. EXTRA WORK NEEDS A NEW AGREEMENT.
+          </Txt>
+        </Card>
+      ) : party === 'artisan' && !canRequestExtension(job) ? (
+        showExt ? (
+          <Card style={{ marginTop: space.md }}>
+            <Txt v="bodyStrong">Ask the customer for more time</Txt>
+            <Row wrap gap={8} style={{ marginVertical: space.sm }}>
+              {EXTENSION_OPTIONS_MIN.map((m) => (
+                <Chip key={m} label={m < 60 ? `+${m} min` : `+${m / 60} hr`} selected={extMin === m} onPress={() => setExtMin(m)} />
+              ))}
+            </Row>
+            <Field placeholder="Why do you need more time?" value={extReason} onChangeText={setExtReason} />
+            <Button
+              title="Send request"
+              onPress={() => {
+                const r = actions.requestExtension(job.id, extMin, extReason);
+                if (!r.ok) return showMessage('Not sent', r.error);
+                setShowExt(false);
+                setExtReason('');
+              }}
+            />
+          </Card>
+        ) : (
+          <View style={{ marginTop: space.sm }}>
+            <Button variant="ghost" small title="Need more time?" icon="time-outline" onPress={() => setShowExt(true)} />
+          </View>
+        )
       ) : null}
-      {party === 'customer' && job.status === 'proof_submitted' && job.proof ? (
-        <View style={{ marginTop: space.md }}>
-          <Banner tone="warning" icon="hourglass-outline" body={`Approve or dispute within ${countdown(job.proof.autoReleaseAt, now)}. After that, payment is released automatically (${AUTO_RELEASE_HOURS[job.size]}h window for ${job.size} jobs).`} />
-        </View>
+
+      {/* Tip after release */}
+      {party === 'customer' && !canTip(job) ? (
+        <Card tone="soft" style={{ marginTop: space.md }} onPress={() => router.push({ pathname: '/tip/[id]', params: { id: job.id } })}>
+          <Row gap={space.md}>
+            <Icon name="gift-outline" color={c.primary} />
+            <View style={{ flex: 1 }}>
+              <Txt v="bodyStrong">Add a tip (optional)</Txt>
+              <Txt v="small" muted>
+                100% goes to {artisan.name.split(' ')[0]}. Sleek takes nothing.
+              </Txt>
+            </View>
+            <Icon name="chevron-forward" color={c.textMuted} />
+          </Row>
+        </Card>
+      ) : job.tip ? (
+        <Banner tone="success" icon="gift-outline" body={`${party === 'customer' ? 'You' : 'The customer'} tipped ${naira(job.tip.amount)}. Thank you!`} />
       ) : null}
+
+      {/* Sleek Protection claim window */}
+      {party === 'customer' && prot.eligible && protWin.open && new Date(protWin.until!).getTime() > now && !job.guaranteeClaimId ? (
+        <Card style={{ marginTop: space.md }} onPress={() => router.push({ pathname: '/protection/[id]', params: { id: job.id } })}>
+          <Row gap={space.md}>
+            <Icon name="ribbon-outline" color={c.primary} />
+            <View style={{ flex: 1 }}>
+              <Txt v="bodyStrong">Problem after approval?</Txt>
+              <Txt v="small" muted>
+                Claim under Sleek Protection until {day(protWin.until!)}.
+              </Txt>
+            </View>
+            <Icon name="chevron-forward" color={c.textMuted} />
+          </Row>
+        </Card>
+      ) : null}
+
+      <Section title={t('timeline.title')}>
+        <Card>
+          <JobTimeline job={job} viewer={party} />
+        </Card>
+        <CoachTip id="tip_timeline" title="Everyone sees the same timeline" body="Each step is time-stamped. If there’s ever a disagreement, Sleek uses this record together with the chat and photos." />
+      </Section>
 
       <Section title="Details">
         <Card>
           <KeyValue k="When" v={windowLabel(job.window)} />
-          <KeyValue k={party === 'customer' ? 'Artisan' : 'Customer'} v={party === 'customer' ? artisan.businessName ?? artisan.name : customer.name} />
+          {party === 'customer' ? (
+            <Row style={{ justifyContent: 'space-between', paddingVertical: 6 }}>
+              <Txt muted>Artisan</Txt>
+              <Row gap={6}>
+                <Avatar name={artisan.businessName ?? artisan.name} color={artisan.avatarColor} size={22} />
+                <Txt>{artisan.businessName ?? artisan.name}</Txt>
+              </Row>
+            </Row>
+          ) : (
+            <View style={{ paddingVertical: 6 }}>
+              <Row style={{ justifyContent: 'space-between' }}>
+                <Txt muted>Customer</Txt>
+                <Txt>{customer.name}</Txt>
+              </Row>
+              {custScore ? (
+                <Row gap={6} style={{ justifyContent: 'flex-end', marginTop: 2 }}>
+                  <Stars value={custScore.overall} size={12} />
+                  <Txt v="small" muted>
+                    {custScore.overall.toFixed(1)} from {custScore.count} artisans{customerBadge(customer.customerStats) ? ` · ${customerBadge(customer.customerStats)}` : ''}
+                  </Txt>
+                </Row>
+              ) : (
+                <Txt v="small" muted style={{ textAlign: 'right' }}>
+                  New customer
+                </Txt>
+              )}
+            </View>
+          )}
           {worker ? <KeyValue k="Assigned worker" v={worker.name} /> : null}
           <KeyValue k="Price" v={job.pricePool.locked ? `${naira(job.pricePool.locked.amount)} (locked)` : 'Negotiating in chat'} />
           <KeyValue k="Escrow" v={escrowLabel(job)} />
@@ -179,7 +305,7 @@ export default function JobDetail() {
         </Section>
       ) : null}
 
-      <Section title="Timeline">
+      <Section title="Activity log">
         {[...job.timeline].reverse().map((e, i) => (
           <Row key={i} gap={space.md} style={{ paddingVertical: 6, alignItems: 'flex-start' }}>
             <Icon name={e.by === 'ugent' ? 'sparkles' : e.by === 'system' || e.by === 'admin' ? 'shield-checkmark-outline' : 'ellipse'} size={12} color={c.primary} style={{ marginTop: 4 }} />
@@ -193,7 +319,7 @@ export default function JobDetail() {
         ))}
       </Section>
 
-      {quote.allowed && !['completed', 'resolved', 'cancelled', 'declined'].includes(job.status) ? (
+      {quote.allowed && !closed ? (
         <Section title={party === 'artisan' && job.status === 'requested' ? 'Decline or cancel' : 'Cancel'}>
           {showCancel ? (
             <Card>
@@ -218,6 +344,11 @@ export default function JobDetail() {
           </Txt>
           <Button variant="ghost" title="Open a dispute" icon="flag-outline" onPress={() => router.push({ pathname: '/dispute/[id]', params: { id: job.id } })} />
         </Section>
+      ) : null}
+      {active && !disclosed ? null : active ? (
+        <Txt v="small" muted center style={{ marginTop: space.lg }}>
+          Feel unsafe at any point? Tap the red Safety button at the top.
+        </Txt>
       ) : null}
     </Screen>
   );

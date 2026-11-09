@@ -46,6 +46,7 @@ export default function Team() {
         </View>
       ) : null}
       <Section title="Workers">
+        {me.workers.length === 0 ? <EmptyState icon="person-add-outline" title="No workers yet" body="Add your first worker. Each one verifies their own NIN and face, then records a video for each skill." action="Add a worker" onAction={() => router.push('/team/add')} /> : null}
         {me.workers.map((w) => {
           const idOk = identityVerified(w.identity);
           const approved = w.skills.filter((s) => s.status === 'approved');

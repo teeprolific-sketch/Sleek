@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { View } from 'react-native';
-import { Banner, Button, Card, Icon, Row, Screen, Section, Txt } from '../components/ui';
+import { SafetyButton } from '../components/jobParts';
+import { Banner, Button, Card, Icon, ListItem, Row, Screen, Section, Txt } from '../components/ui';
 import { AUTO_RELEASE_HOURS, COMMISSION_RATE } from '../domain/escrow';
 import { useMyArtisan, useStore } from '../store';
 import { space, useTheme } from '../theme';
@@ -19,8 +20,33 @@ export default function TrustSafety() {
   const { c } = useTheme();
   const artisan = useMyArtisan();
   const violations = useStore((s) => s.violations.filter((v) => v.userId === s.session.userId).length);
+  const trusted = useStore((s) => s.customers.find((x) => x.id === s.session.userId)?.trustedContact);
+  const jobs = useStore((s) => s.jobs);
+  const userId = useStore((s) => s.session.userId);
+  const activeJob = jobs.find((j) => (j.customerId === userId || j.artisanId === userId) && ['funded', 'in_progress'].includes(j.status));
   return (
-    <Screen title="Trust & Safety centre">
+    <Screen title="Help & Safety Centre">
+      <Section title="Safety tools" style={{ marginTop: 0 }}>
+        <Card>
+          <Row gap={space.md}>
+            <View style={{ flex: 1 }}>
+              <Txt v="bodyStrong">Need help right now?</Txt>
+              <Txt v="small" muted>
+                Alert Sleek Safety, call 112, or share your job details with someone you trust.
+              </Txt>
+            </View>
+            <SafetyButton job={activeJob} />
+          </Row>
+          {activeJob ? (
+            <Txt v="tiny" muted style={{ marginTop: 6 }}>
+              LINKED TO YOUR ACTIVE JOB: {activeJob.title.toUpperCase()}
+            </Txt>
+          ) : null}
+        </Card>
+        <ListItem icon="person-add-outline" title="Trusted contact" subtitle={trusted ? `${trusted.name} · tap to change` : 'Not set — add one in Settings'} onPress={() => router.push('/settings')} />
+        <ListItem icon="flag-outline" title="Dispute Centre" subtitle="Problems with a paid job" onPress={() => router.push('/disputes')} />
+        <ListItem icon="help-circle-outline" title="Help & Support" subtitle="FAQs and contact support" onPress={() => router.push('/help')} />
+      </Section>
       <Card style={{ backgroundColor: '#0B3D91', borderColor: '#0B3D91' }}>
         <Row gap={space.md}>
           <Icon name="shield-checkmark" size={36} color="#0EA5E9" />

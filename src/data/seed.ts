@@ -5,6 +5,8 @@ import type {
   ArtisanAccountType,
   ChatMessage,
   Customer,
+  CustomerReview,
+  Dispute,
   IdentityVerification,
   Job,
   Review,
@@ -65,6 +67,7 @@ const weekHours = (start = 8, end = 18, sunday = false): Artisan['workingHours']
 const COLORS = ['#0EA5E9', '#0B3D91', '#0284C7', '#1E40AF', '#0369A1', '#2563EB', '#0F766E', '#7C3AED', '#B45309', '#BE185D'];
 
 let phoneSeq = 10;
+const GENDERS: Record<string, 'male' | 'female'> = {'art_tunde': 'male', 'art_chioma': 'female', 'art_emeka': 'male', 'art_bisi': 'female', 'art_musa': 'male', 'art_grace': 'female', 'art_kelechi': 'male', 'art_aisha': 'female', 'art_femi': 'male', 'art_ngozi': 'female', 'art_sola': 'male', 'art_ibrahim': 'male', 'art_yemi': 'male', 'art_offline': 'male', 'art_brightclean': 'female', 'art_buildpro': 'male'};
 function artisan(
   id: string,
   name: string,
@@ -85,6 +88,7 @@ function artisan(
   } = {},
 ): Artisan {
   return {
+    gender: GENDERS[id],
     id,
     role: 'artisan',
     accountType: opts.accountType ?? 'individual',
@@ -191,6 +195,9 @@ export function seedCustomers(): Customer[] {
       area: 'Yaba',
       city: 'Lagos',
       joinedAt: iso(Date.now() - 60 * DAY),
+      favourites: ['art_tunde', 'art_chioma'],
+      customerStats: { ratingCount: 4, professionalismSum: 19, claritySum: 18, paymentSum: 20 },
+      credit: 0,
       addresses: [
         { label: 'Home', line1: '14 Alagomeji Street', area: 'Yaba', city: 'Lagos', state: 'Lagos', landmark: 'Opposite the pharmacy' },
         { label: 'Office', line1: '3 Herbert Macaulay Way', area: 'Yaba', city: 'Lagos', state: 'Lagos' },
@@ -264,7 +271,87 @@ export function seedJobs(customer: Customer): { jobs: Job[]; messages: ChatMessa
     { id: 'msg_d3', jobId: ac.id, from: 'artisan', kind: 'text', text: 'Good afternoon ma. Yes I can. It is likely low gas or a dirty coil. I will service it and check the gas.', at: iso(now - 3_700_000) },
     { id: 'msg_d4', jobId: ac.id, from: 'artisan', kind: 'price', text: 'Proposed ₦18,000', at: iso(now - 3_600_000), offerId: 'off_demo_1' },
   ];
-  return { jobs: [ac], messages };
+  // History so Job History, Insights, Favourites and Rebook have real data.
+  const past = (id: string, artisanId: string, categoryId: string, title: string, daysAgo: number, amount: number, over: Partial<Job>): Job => {
+    const st = new Date(now - daysAgo * DAY);
+    st.setHours(11, 0, 0, 0);
+    const en = new Date(st.getTime() + 2 * 3_600_000);
+    return {
+      id,
+      customerId: customer.id,
+      artisanId,
+      categoryId,
+      title,
+      description: title,
+      window: { start: st.toISOString(), end: en.toISOString() },
+      address: customer.addresses[0],
+      size: 'short',
+      status: 'completed',
+      pricePool: { offers: [{ id: `${id}_o`, by: 'artisan', amount, at: iso(st.getTime() - DAY), status: 'accepted' }], locked: { amount, lockedAt: iso(st.getTime() - DAY), offerId: `${id}_o` } },
+      escrow: { state: 'released', amount, fundedAt: iso(st.getTime() - DAY), paymentRef: `ESC_${id}`, releasedAt: iso(en.getTime() + 3_600_000), releasedToArtisan: Math.round(amount * 0.92), commission: Math.round(amount * 0.08), refundedToCustomer: 0, releaseReason: 'customer_approved' },
+      issuePhotos: [],
+      createdAt: iso(st.getTime() - 2 * DAY),
+      updatedAt: iso(en.getTime()),
+      timeline: [{ at: iso(st.getTime() - 2 * DAY), label: 'Request sent', by: 'customer' }],
+      origin: 'app',
+      enRouteAt: iso(st.getTime() - 1_800_000),
+      startedAt: iso(st.getTime()),
+      proof: { photos: [], note: 'Done and tested.', submittedAt: iso(en.getTime()), autoReleaseAt: iso(en.getTime() + DAY) },
+      ...over,
+    };
+  };
+  const history: Job[] = [
+    past('job_hist_brakes', 'art_tunde', 'mechanic', 'Brake pad replacement', 18, 18000, { reviewId: 'rev_art_tunde_0', customerReviewId: 'crev_hist_brakes' }),
+    past('job_hist_agbada', 'art_chioma', 'tailor', 'Agbada for a wedding', 40, 45000, { reviewId: 'rev_art_chioma_0', tip: { amount: 2000, at: iso(now - 39 * DAY), reference: 'TIP_hist' } }),
+    past('job_hist_tap', 'art_musa', 'plumber', 'Leaking kitchen tap', 9, 8000, {
+      status: 'cancelled',
+      escrow: { state: 'refunded', amount: 8000, fundedAt: iso(now - 11 * DAY), refundedToCustomer: 8000, releasedToArtisan: 0, commission: 0, releasedAt: iso(now - 10 * DAY) },
+      cancellation: { by: 'customer', reason: 'Fixed it myself', at: iso(now - 10 * DAY), refundAmount: 8000, artisanCompensation: 0 },
+      enRouteAt: undefined,
+      startedAt: undefined,
+      proof: undefined,
+    }),
+    past('job_hist_wardrobe', 'art_kelechi', 'carpenter', 'Wardrobe door rehang', 55, 24000, {
+      status: 'resolved',
+      disputeId: 'dsp_hist_wardrobe',
+      escrow: { state: 'partially_refunded', amount: 24000, fundedAt: iso(now - 56 * DAY), releasedAt: iso(now - 52 * DAY), releasedToArtisan: 11040, commission: 960, refundedToCustomer: 12000, releaseReason: 'dispute_resolution' },
+    }),
+  ];
+  const up = new Date(now + DAY);
+  up.setHours(10, 0, 0, 0);
+  const upcoming: Job = {
+    ...past('job_demo_upcoming', 'art_tunde', 'mechanic', 'Car service + oil change', 0, 25000, {}),
+    window: { start: up.toISOString(), end: new Date(up.getTime() + 2 * 3_600_000).toISOString() },
+    status: 'funded',
+    escrow: { state: 'held', amount: 25000, fundedAt: iso(now - 3_600_000), paymentRef: 'ESC_demo_upcoming' },
+    enRouteAt: undefined,
+    startedAt: undefined,
+    proof: undefined,
+  };
+  messages.push({ id: 'msg_up1', jobId: upcoming.id, from: 'system', kind: 'system', text: 'Escrow funded: ₦25,000 is held safely by Sleek. The job address is now shared with the artisan.', at: iso(now - 3_600_000) });
+  return { jobs: [ac, upcoming, ...history], messages };
+}
+
+export function seedDisputes(): Dispute[] {
+  const at = iso(Date.now() - 54 * DAY);
+  return [
+    {
+      id: 'dsp_hist_wardrobe',
+      jobId: 'job_hist_wardrobe',
+      openedBy: 'customer',
+      reason: 'poor_quality',
+      details: 'One door still does not close fully after the rehang.',
+      evidence: [],
+      status: 'resolved',
+      openedAt: at,
+      artisanResponse: 'The frame itself is warped; I fixed the hinges as agreed.',
+      resolution: { outcome: 'split', artisanShare: 0.5, note: 'Hinges were fixed, but the agreed result (doors closing) was not fully reached. Split 50/50.', by: 'adm_sleek', at: iso(Date.now() - 52 * DAY) },
+    },
+  ];
+}
+
+export function seedCustomerReviews(): CustomerReview[] {
+  return [{ id: 'crev_hist_brakes', jobId: 'job_hist_brakes', customerId: DEMO_CUSTOMER_ID, artisanId: DEMO_ARTISAN_ID, professionalism: 5, clarity: 4, payment: 5, comment: 'Clear about the problem and approved quickly.', at: iso(Date.now() - 17 * DAY) }];
 }
 
 export function emptyJobDraft(): Pick<Job, 'pricePool' | 'escrow' | 'issuePhotos'> {

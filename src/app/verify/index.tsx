@@ -87,7 +87,8 @@ export default function VerifyHub() {
                   </View>
                   <Pill label={SKILL_STATUS_LABEL[s.status]} tone={TONE[s.status]} />
                 </Row>
-                {redo ? <Button small variant="secondary" title="Record a new video" style={{ marginTop: space.md }} onPress={() => router.push({ pathname: '/verify/skill', params: { categoryId: s.categoryId, ...wq } })} /> : null}
+                {redo ? <Button small variant="secondary" title="See what to fix & re-submit" style={{ marginTop: space.md }} onPress={() => router.push({ pathname: '/verify/resubmit', params: { categoryId: s.categoryId, ...wq } })} /> : null}
+                {cat.risk === 'high' && s.status === 'in_review' && !s.certificate ? <Button small variant="ghost" title="Add certificate photo" style={{ marginTop: space.sm }} onPress={() => router.push({ pathname: '/verify/resubmit', params: { categoryId: s.categoryId, ...wq } })} /> : null}
               </Card>
             );
           })

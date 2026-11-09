@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { JobCard } from '../../components/domain';
-import { EmptyState, Screen, Segmented, Spacer } from '../../components/ui';
+import { EmptyState, IconButton, Screen, Segmented, Spacer } from '../../components/ui';
 import { useStore } from '../../store';
 
 type Tab = 'active' | 'upcoming' | 'past';
@@ -20,7 +20,7 @@ export default function CustomerJobs() {
   }, [jobs, userId, tab]);
 
   return (
-    <Screen title="My jobs" back={false}>
+    <Screen title="My jobs" back={false} right={<IconButton icon="time-outline" label="Job history" onPress={() => router.push('/history')} />}>
       <Segmented value={tab} onChange={setTab} options={[{ value: 'active', label: 'Active' }, { value: 'upcoming', label: 'Upcoming' }, { value: 'past', label: 'Past' }]} />
       <Spacer />
       {list.length ? (

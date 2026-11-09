@@ -16,6 +16,7 @@ export const PURPOSE_PROMPT: Record<UploadPurpose, { title: string; hint: string
   proof_of_work: { title: 'Proof of work', hint: 'Show the finished job clearly. Take several angles.' },
   dispute_evidence: { title: 'Dispute evidence', hint: 'Show exactly what is wrong. This goes to the Sleek Trust team.' },
   delivery_confirmation: { title: 'Delivery confirmation', hint: 'Photo of the delivered items.' },
+  certificate: { title: 'Trade certificate or licence', hint: 'Lay it flat in good light. All text must be readable.' },
 };
 
 export function requestCapture(purpose: UploadPurpose, onDone: Handler, jobId?: string) {

@@ -10,9 +10,20 @@ import {
   seedArtisans,
   seedCustomers,
   seedJobs,
+  seedCustomerReviews,
+  seedDisputes,
   seedReviews,
   serviceItem,
 } from '../data/seed';
+import { validateCustomerReview } from '../domain/customerRating';
+import { extensionClashes, pendingExtension, validateExtension } from '../domain/extensions';
+import { DEFAULT_PREFS } from '../domain/matching';
+import { categoryFromLink, DEFAULT_NOTIFICATION_PREFS, shouldPush } from '../domain/notifications';
+import { autoPayoutDue, DEFAULT_SCHEDULE } from '../domain/payouts';
+import { protectionCover, protectionEligible, protectionWindow } from '../domain/protection';
+import { makeReferralCode, referralQualifies, REFERRAL_REWARD } from '../domain/referrals';
+import { canMarkEnRoute } from '../domain/timeline';
+import { validateTip } from '../domain/tips';
 import { bookableFor, freeWorkersFor, workerFreeFor, workerSkillApproved } from '../domain/availability';
 import * as Esc from '../domain/escrow';
 import { moderateMessage, type ModerationResult } from '../domain/moderation';
@@ -20,7 +31,20 @@ import * as Pool from '../domain/pricePool';
 import { isTrusted } from '../domain/trust';
 import type {
   Admin,
+  AdminNote,
   AppNotification,
+  BusinessDetails,
+  CustomerReview,
+  GuaranteeClaim,
+  MatchingPrefs,
+  NotificationCategory,
+  NotificationPrefs,
+  PayoutSchedule,
+  Referral,
+  SafetyAlert,
+  SafetyAlertKind,
+  TimeOff,
+  Worker as WorkerT,
   Artisan,
   ArtisanAccountType,
   CapturedMedia,
@@ -69,6 +93,19 @@ export interface Settings {
   notifications: boolean;
   dataSaver: boolean;
   ugentLinked: boolean;
+  language: 'en' | 'pcm';
+  /** First-run tooltips already dismissed. */
+  seenTips: string[];
+  /** Demo/QA: force the offline experience regardless of the real connection. */
+  simulateOffline?: boolean;
+}
+
+export interface OutboxMessage {
+  id: ID;
+  jobId: ID;
+  from: 'customer' | 'artisan';
+  text: string;
+  at: string;
 }
 
 interface Data {
@@ -91,6 +128,15 @@ interface Data {
   ugentRequests: UgentRequest[];
   /** Audit log of every controlled upload. */
   uploadLog: CapturedMedia[];
+  customerReviews: CustomerReview[];
+  safetyAlerts: SafetyAlert[];
+  guaranteeClaims: GuaranteeClaim[];
+  referrals: Referral[];
+  adminNotes: AdminNote[];
+  notificationPrefs: Record<ID, NotificationPrefs>;
+  /** Chat messages written while offline; sent automatically when the network returns. */
+  outbox: OutboxMessage[];
+  network: { online: boolean; weak: boolean };
 }
 
 export interface NewJobInput {
@@ -108,7 +154,7 @@ export interface NewJobInput {
 export interface Actions {
   completeOnboarding(): void;
   signInDemo(kind: 'customer' | 'artisan' | 'team' | 'agency' | 'admin'): void;
-  register(input: { phone: string; name: string; role: 'customer' | 'artisan'; accountType?: ArtisanAccountType; businessName?: string; city: string; area: string }): void;
+  register(input: { phone: string; name: string; role: 'customer' | 'artisan'; accountType?: ArtisanAccountType; businessName?: string; city: string; area: string; referralCode?: string }): Result;
   signOut(): void;
   setTheme(mode: ThemeMode): void;
   updateSettings(p: Partial<Settings>): void;
@@ -162,6 +208,41 @@ export interface Actions {
   markRead(id: ID): void;
   markAllRead(): void;
 
+  // Customer extras
+  toggleFavourite(artisanId: ID): boolean;
+  setMatchingPrefs(p: Partial<MatchingPrefs>): void;
+  setTrustedContact(c: { name: string; phone: string } | undefined): Result;
+  addTip(jobId: ID, amount: number, method: PaymentMethod): Promise<Result>;
+  decideExtension(jobId: ID, approve: boolean): Result;
+  submitGuaranteeClaim(jobId: ID, details: string, evidence: CapturedMedia[]): Result<ID>;
+  addDisputeEvidence(disputeId: ID, media: CapturedMedia): Result;
+
+  // Artisan extras
+  markEnRoute(jobId: ID): Result;
+  requestExtension(jobId: ID, extraMinutes: number, reason: string): Result;
+  rateCustomer(jobId: ID, r: { professionalism: number; clarity: number; payment: number; comment: string }): Result;
+  setPayoutSchedule(s: PayoutSchedule): void;
+  addTimeOff(t: Omit<TimeOff, 'id'>): Result;
+  removeTimeOff(id: ID): void;
+  updateWorker(workerId: ID, p: Partial<Pick<WorkerT, 'role' | 'ownerNote'>>): void;
+  removeWorker(workerId: ID): Result;
+  completeBusinessOnboarding(d: BusinessDetails): Result;
+  submitCertificate(categoryId: ID, media: CapturedMedia, workerId?: ID): Result;
+
+  // Shared
+  raiseSafetyAlert(kind: SafetyAlertKind, note: string, jobId?: ID): SafetyAlert;
+  setNotificationPref(category: NotificationCategory, enabled: boolean): void;
+  setQuietHours(q: NotificationPrefs['quietHours']): void;
+  setLanguage(l: Settings['language']): void;
+  dismissTip(id: string): void;
+  setNetwork(n: { online: boolean; weak: boolean }): void;
+  flushOutbox(): void;
+
+  // Admin extras
+  updateSafetyAlert(id: ID, status: SafetyAlert['status']): void;
+  addAdminNote(targetType: AdminNote['targetType'], targetId: ID, text: string): Result;
+  decideGuaranteeClaim(id: ID, approve: boolean, payout: number): Result;
+
   // Ugent
   queueUgentRequest(action: UgentActionName, args: Record<string, unknown>, summary: string): UgentRequest;
   decideUgentRequest(id: ID, decision: 'confirmed' | 'rejected', result?: unknown, error?: string): void;
@@ -178,14 +259,14 @@ function initialData(): Data {
   return {
     onboarded: false,
     session: {},
-    settings: { themeMode: 'system', notifications: true, dataSaver: false, ugentLinked: false },
+    settings: { themeMode: 'system', notifications: true, dataSaver: false, ugentLinked: false, language: 'en', seenTips: [] },
     customers,
     artisans,
     admins: [SEED_ADMIN],
     jobs,
     messages,
     reviews: seedReviews(artisans),
-    disputes: [],
+    disputes: seedDisputes(),
     violations: [],
     notifications: [
       { id: 'n_welcome', userId: DEMO_CUSTOMER_ID, title: 'Welcome to Sleek', body: 'Your money is protected by escrow until you approve the work.', at: nowIso(), read: false },
@@ -202,6 +283,17 @@ function initialData(): Data {
     payouts: [{ id: 'po1', artisanId: DEMO_ARTISAN_ID, amount: 20000, status: 'paid', requestedAt: new Date(Date.now() - 5 * 86_400_000).toISOString(), paidAt: new Date(Date.now() - 5 * 86_400_000).toISOString() }],
     ugentRequests: [],
     uploadLog: [],
+    customerReviews: seedCustomerReviews(),
+    safetyAlerts: [],
+    guaranteeClaims: [],
+    referrals: [
+      { id: 'ref_demo1', code: makeReferralCode('Amaka Johnson', DEMO_CUSTOMER_ID), referrerId: DEMO_CUSTOMER_ID, refereeId: 'cus_demo_friend', refereeName: 'Tolu A.', refereeRole: 'customer', status: 'qualified', reward: REFERRAL_REWARD.customer, at: new Date(Date.now() - 20 * 86_400_000).toISOString(), qualifiedAt: new Date(Date.now() - 12 * 86_400_000).toISOString() },
+      { id: 'ref_demo2', code: makeReferralCode('Amaka Johnson', DEMO_CUSTOMER_ID), referrerId: DEMO_CUSTOMER_ID, refereeId: 'art_demo_friend', refereeName: 'Segun O.', refereeRole: 'artisan', status: 'pending', reward: REFERRAL_REWARD.artisan, at: new Date(Date.now() - 4 * 86_400_000).toISOString() },
+    ],
+    adminNotes: [],
+    notificationPrefs: {},
+    outbox: [],
+    network: { online: true, weak: false },
   };
 }
 
@@ -225,8 +317,30 @@ export const useStore = create<State>()(
       const timeline = (j: Job, label: string, by: Job['timeline'][number]['by']) => [...j.timeline, { at: nowIso(), label, by }];
       const sys = (jobId: ID, text: string, extra: Partial<ChatMessage> = {}) =>
         set((s) => ({ messages: [...s.messages, { id: uid('msg'), jobId, from: 'system', kind: 'system', text, at: nowIso(), ...extra }] }));
-      const notify = (userId: ID, title: string, body: string, link?: string) =>
-        set((s) => ({ notifications: [{ id: uid('n'), userId, title, body, at: nowIso(), read: false, link }, ...s.notifications] }));
+      const notify = (userId: ID, title: string, body: string, link?: string, category?: NotificationCategory) =>
+        set((s) => {
+          const cat = category ?? categoryFromLink(link, title);
+          const silent = !shouldPush(s.notificationPrefs[userId], cat, Date.now());
+          // Production: when !silent, also send an Expo push to the user's devices.
+          return { notifications: [{ id: uid('n'), userId, title, body, at: nowIso(), read: false, link, category: cat, silent }, ...s.notifications] };
+        });
+      const adminIds = () => get().admins.map((a) => a.id);
+      const isOffline = () => !get().network.online;
+      const OFFLINE = 'You’re offline. Connect to the internet to do this — nothing has been charged.';
+      const OFFLINE_ACTION = 'You’re offline. This needs a connection — try again when you’re back online.';
+      const referralCodeOf = (id: ID, name: string) => makeReferralCode(name, id);
+      /** Check whether this user's referral now qualifies, and reward the referrer once. */
+      const checkReferral = (refereeId: ID, role: 'customer' | 'artisan', completedJobs: number) => {
+        const r = get().referrals.find((x) => x.refereeId === refereeId && x.status === 'pending');
+        if (!r || !referralQualifies(role, completedJobs)) return;
+        set((s) => ({ referrals: s.referrals.map((x) => (x.id === r.id ? { ...x, status: 'qualified', qualifiedAt: nowIso() } : x)) }));
+        if (artisanById(r.referrerId)) {
+          set((s) => ({ ledger: [{ id: uid('led'), artisanId: r.referrerId, type: 'referral_bonus', amount: r.reward, at: nowIso(), note: `Referral bonus: ${r.refereeName}` }, ...s.ledger] }));
+        } else {
+          set((s) => ({ customers: s.customers.map((c) => (c.id === r.referrerId ? { ...c, credit: (c.credit ?? 0) + r.reward } : c)) }));
+        }
+        notify(r.referrerId, 'You earned a referral reward', `${r.refereeName} qualified — ${naira(r.reward)} added${artisanById(r.referrerId) ? ' to your earnings' : ' as Sleek credit'}.`, '/referrals', 'referrals');
+      };
       const nameOf = (id: ID) => get().customers.find((c) => c.id === id)?.name ?? artisanById(id)?.businessName ?? artisanById(id)?.name ?? 'User';
 
       const releaseToArtisan = (j: Job, reason: 'customer_approved' | 'auto_release') => {
@@ -241,6 +355,8 @@ export const useStore = create<State>()(
           ledger: [{ id: uid('led'), artisanId: a.id, jobId: j.id, type: 'escrow_release', amount: escrow.releasedToArtisan!, at: nowIso(), note: j.title }, ...s.ledger],
         }));
         patchArtisan(a.id, (x) => ({ stats: { ...x.stats, completedJobs: x.stats.completedJobs + 1 } }));
+        checkReferral(a.id, 'artisan', a.stats.completedJobs + 1);
+        checkReferral(j.customerId, 'customer', get().jobs.filter((x) => x.customerId === j.customerId && x.status === 'completed').length);
         sys(j.id, `Payment released: ${naira(escrow.releasedToArtisan!)} to the artisan (Sleek commission ${naira(escrow.commission!)}).`);
         notify(a.id, 'Payment released', `${naira(escrow.releasedToArtisan!)} for “${j.title}” is now in your earnings.`, '/earnings');
         notify(j.customerId, reason === 'auto_release' ? 'Payment auto-released' : 'Job completed', `“${j.title}” is complete. Please rate your artisan.`, `/review/${j.id}`);
@@ -262,7 +378,13 @@ export const useStore = create<State>()(
           };
           set({ session: { ...map[kind], token: uid('tok') }, onboarded: true });
         },
-        register: ({ phone, name, role, accountType, businessName, city, area }) => {
+        register: ({ phone, name, role, accountType, businessName, city, area, referralCode }) => {
+          let referrer: { id: ID; name: string } | undefined;
+          if (referralCode?.trim()) {
+            const code = referralCode.trim().toUpperCase();
+            referrer = [...get().customers, ...get().artisans].map((u) => ({ id: u.id, name: u.name })).find((u) => referralCodeOf(u.id, u.name) === code);
+            if (!referrer) return fail('That referral code wasn’t found. Check it, or leave it empty.');
+          }
           const id = uid(role === 'customer' ? 'cus' : 'art');
           if (role === 'customer') {
             const c: Customer = { id, role: 'customer', name, phone, area, city, joinedAt: nowIso(), addresses: [{ label: 'Home', line1: 'Add your street address', area, city, state: city }] };
@@ -289,19 +411,247 @@ export const useStore = create<State>()(
               workingHours: { 0: null, 1: { start: 8, end: 18 }, 2: { start: 8, end: 18 }, 3: { start: 8, end: 18 }, 4: { start: 8, end: 18 }, 5: { start: 8, end: 18 }, 6: { start: 9, end: 15 } },
               joinedAt: nowIso(),
               avatarColor: '#0EA5E9',
+              business: accountType && accountType !== 'individual' ? { serviceAreas: [area], teamSize: 1, completedOnboarding: false } : undefined,
             };
             set((s) => ({ artisans: [...s.artisans, a] }));
             notify(id, 'Welcome to Sleek', 'Verify your identity and each skill to start receiving jobs.', '/verify');
           }
+          if (referrer) {
+            const ref: Referral = { id: uid('ref'), code: referralCode!.trim().toUpperCase(), referrerId: referrer.id, refereeId: id, refereeName: `${name.split(' ')[0]} ${name.split(' ')[1]?.[0] ?? ''}.`, refereeRole: role, status: 'pending', reward: REFERRAL_REWARD[role], at: nowIso() };
+            set((s) => ({ referrals: [ref, ...s.referrals] }));
+            notify(referrer.id, 'Your friend joined Sleek', `${ref.refereeName} signed up with your code. You’ll earn ${naira(ref.reward)} when they qualify.`, '/referrals', 'referrals');
+          }
           set({ session: { userId: id, role, phone, token: uid('tok') }, onboarded: true });
+          return ok(undefined);
         },
         signOut: () => set({ session: {} }),
         setTheme: (mode) => set((s) => ({ settings: { ...s.settings, themeMode: mode } })),
         updateSettings: (p) => set((s) => ({ settings: { ...s.settings, ...p } })),
         resetDemo: () => set({ ...initialData(), onboarded: true, session: {} }),
 
+        // ---- customer extras ---------------------------------------------
+        toggleFavourite: (artisanId) => {
+          const id = me().userId;
+          let now = false;
+          set((s) => ({
+            customers: s.customers.map((c) => {
+              if (c.id !== id) return c;
+              const has = (c.favourites ?? []).includes(artisanId);
+              now = !has;
+              return { ...c, favourites: has ? (c.favourites ?? []).filter((x) => x !== artisanId) : [...(c.favourites ?? []), artisanId] };
+            }),
+          }));
+          return now;
+        },
+        setMatchingPrefs: (p) => set((s) => ({ customers: s.customers.map((c) => (c.id === s.session.userId ? { ...c, prefs: { ...DEFAULT_PREFS, ...c.prefs, ...p } } : c)) })),
+        setTrustedContact: (c) => {
+          if (c && !/^(0[789][01]\d{8}|234[789][01]\d{8})$/.test(c.phone.replace(/\D/g, ''))) return fail('Enter a valid Nigerian mobile number.');
+          const uidMe = me().userId;
+          set((s) => ({ customers: s.customers.map((x) => (x.id === uidMe ? { ...x, trustedContact: c } : x)) }));
+          return ok(undefined);
+        },
+        addTip: async (jobId, amount, method) => {
+          const j = job(jobId);
+          if (!j || myParty(j) !== 'customer') return fail('Only the customer can tip.');
+          const err = validateTip(j, amount);
+          if (err) return fail(err);
+          if (isOffline()) return fail(OFFLINE);
+          const res = await payments.payOrder({ orderId: `tip_${jobId}`, amount, method });
+          if (!res.ok) return fail(res.error ?? 'Payment failed.');
+          patchJob(jobId, (x) => ({ tip: { amount, at: nowIso(), reference: res.reference! }, timeline: timeline(x, `Customer added a ${naira(amount)} tip`, 'customer') }));
+          set((s) => ({ ledger: [{ id: uid('led'), artisanId: j.artisanId, jobId, type: 'tip', amount, at: nowIso(), note: `Tip: ${j.title}` }, ...s.ledger] }));
+          notify(j.artisanId, 'You received a tip 🎉', `${naira(amount)} tip for “${j.title}”. Tips are 100% yours.`, '/earnings', 'payments');
+          return ok(undefined);
+        },
+        decideExtension: (jobId, approve) => {
+          if (isOffline()) return fail(OFFLINE_ACTION);
+          const j = job(jobId);
+          if (!j || myParty(j) !== 'customer') return fail('Only the customer can approve more time.');
+          const req = pendingExtension(j);
+          if (!req) return fail('There is no request waiting.');
+          if (approve && extensionClashes(j, req.extraMinutes, get().jobs)) return fail('The artisan has another booking right after — they can’t stay longer. Decline and agree a follow-up job instead.');
+          patchJob(jobId, (x) => ({
+            window: approve ? { ...x.window, end: req.newEnd } : x.window,
+            extensions: (x.extensions ?? []).map((e) => (e.id === req.id ? { ...e, status: approve ? 'approved' : 'declined', decidedAt: nowIso() } : e)),
+            timeline: timeline(x, approve ? `More time approved (+${req.extraMinutes} min)` : 'More time declined', 'customer'),
+          }));
+          sys(jobId, approve ? `Customer approved ${req.extraMinutes} more minutes. New finish time: ${new Date(req.newEnd).toLocaleTimeString('en-NG', { hour: 'numeric', minute: '2-digit' })}. The price stays the same unless you agree a new job.` : 'Customer declined the request for more time.');
+          notify(j.artisanId, approve ? 'More time approved' : 'More time declined', `“${j.title}”`, `/job/${jobId}`, 'job_progress');
+          return ok(undefined);
+        },
+        submitGuaranteeClaim: (jobId, details, evidence) => {
+          const j = job(jobId);
+          if (!j || myParty(j) !== 'customer') return fail('Only the customer can claim.');
+          const a = artisanById(j.artisanId)!;
+          if (!protectionEligible(j, a, category(j.categoryId), Date.now()).eligible) return fail('This job is not covered by Sleek Protection.');
+          const w = protectionWindow(j);
+          if (!w.open || new Date(w.until!).getTime() < Date.now()) return fail('The 7-day protection window for this job has closed.');
+          if (j.guaranteeClaimId) return fail('You already made a claim for this job.');
+          if (details.trim().length < 20) return fail('Describe what went wrong (at least 20 characters).');
+          const c: GuaranteeClaim = { id: uid('gc'), jobId, customerId: j.customerId, details: details.trim(), evidence, status: 'submitted', at: nowIso() };
+          set((s) => ({ guaranteeClaims: [c, ...s.guaranteeClaims] }));
+          patchJob(jobId, (x) => ({ guaranteeClaimId: c.id, timeline: timeline(x, 'Sleek Protection claim submitted', 'customer') }));
+          for (const id of adminIds()) notify(id, 'Protection claim', `${j.title} — up to ${naira(protectionCover(j))}`, '/safety-queue', 'disputes');
+          notify(j.artisanId, 'Protection claim on a past job', `The customer reported a problem with “${j.title}”. Sleek may contact you in chat.`, `/job/${jobId}`, 'disputes');
+          return ok(c.id);
+        },
+        addDisputeEvidence: (disputeId, media) => {
+          const d = get().disputes.find((x) => x.id === disputeId);
+          const j = d && job(d.jobId);
+          if (!d || !j || !myParty(j)) return fail('Dispute not found.');
+          if (d.status === 'resolved') return fail('This dispute is closed.');
+          if (media.purpose !== 'dispute_evidence') return fail('Only dispute evidence photos can be added here.');
+          set((s) => ({ disputes: s.disputes.map((x) => (x.id === disputeId ? { ...x, evidence: [...x.evidence, media] } : x)) }));
+          return ok(undefined);
+        },
+
+        // ---- artisan extras ----------------------------------------------------
+        markEnRoute: (jobId) => {
+          const j = job(jobId);
+          if (!j || myParty(j) !== 'artisan') return fail('Only the artisan can do this.');
+          if (!canMarkEnRoute(j, Date.now())) return fail('You can mark “on my way” from 3 hours before the job, once escrow is funded.');
+          patchJob(jobId, (x) => ({ enRouteAt: nowIso(), timeline: timeline(x, 'Artisan is on the way', 'artisan') }));
+          sys(jobId, 'The artisan is on the way.');
+          notify(j.customerId, 'Your artisan is on the way', `For “${j.title}”.`, `/job/${jobId}`, 'job_progress');
+          return ok(undefined);
+        },
+        requestExtension: (jobId, extraMinutes, reason) => {
+          const j = job(jobId);
+          if (!j || myParty(j) !== 'artisan') return fail('Only the artisan can ask for more time.');
+          const err = validateExtension(j, extraMinutes, reason);
+          if (err) return fail(err);
+          const m = moderateMessage(reason);
+          if (!m.allowed) return fail(m.warning!);
+          if (extensionClashes(j, extraMinutes, get().jobs)) return fail('That would overlap your next booking. Ask for less time.');
+          const newEnd = new Date(new Date(j.window.end).getTime() + extraMinutes * 60_000).toISOString();
+          patchJob(jobId, (x) => ({ extensions: [...(x.extensions ?? []), { id: uid('ext'), extraMinutes, newEnd, reason: reason.trim(), status: 'pending', at: nowIso() }], timeline: timeline(x, `Artisan asked for ${extraMinutes} more minutes`, 'artisan') }));
+          sys(jobId, `The artisan is asking for ${extraMinutes} more minutes: “${reason.trim()}”. The customer can approve or decline on the job page.`);
+          notify(j.customerId, 'Artisan needs more time', `${extraMinutes} more minutes for “${j.title}”. Approve or decline.`, `/job/${jobId}`, 'job_progress');
+          return ok(undefined);
+        },
+        rateCustomer: (jobId, r) => {
+          const j = job(jobId);
+          if (!j || myParty(j) !== 'artisan') return fail('Only the artisan can rate the customer.');
+          if (j.status !== 'completed' && j.status !== 'resolved') return fail('You can rate the customer once the job is complete.');
+          if (j.customerReviewId) return fail('You already rated this customer.');
+          const err = validateCustomerReview(r);
+          if (err) return fail(err);
+          const m = moderateMessage(r.comment);
+          if (!m.allowed) return fail(m.warning!);
+          const rev: CustomerReview = { id: uid('crev'), jobId, customerId: j.customerId, artisanId: j.artisanId, professionalism: r.professionalism, clarity: r.clarity, payment: r.payment, comment: r.comment.trim(), at: nowIso() };
+          set((s) => ({
+            customerReviews: [rev, ...s.customerReviews],
+            customers: s.customers.map((c) => {
+              if (c.id !== j.customerId) return c;
+              const st = c.customerStats ?? { ratingCount: 0, professionalismSum: 0, claritySum: 0, paymentSum: 0 };
+              return { ...c, customerStats: { ratingCount: st.ratingCount + 1, professionalismSum: st.professionalismSum + r.professionalism, claritySum: st.claritySum + r.clarity, paymentSum: st.paymentSum + r.payment } };
+            }),
+          }));
+          patchJob(jobId, () => ({ customerReviewId: rev.id }));
+          return ok(undefined);
+        },
+        setPayoutSchedule: (sc) => patchArtisan(me().userId!, () => ({ payoutSchedule: sc })),
+        addTimeOff: (t) => {
+          if (!(new Date(t.end).getTime() > new Date(t.start).getTime())) return fail('The end must be after the start.');
+          const a = artisanById(me().userId!);
+          if (!a) return fail('Artisan accounts only.');
+          const clash = get().jobs.find((j) => j.artisanId === a.id && Esc.BLOCKING_STATUSES.includes(j.status) && new Date(j.window.start) < new Date(t.end) && new Date(j.window.end) > new Date(t.start));
+          if (clash) return fail(`You have a funded job then (“${clash.title}”). Finish or cancel it first.`);
+          patchArtisan(a.id, (x) => ({ timeOff: [...(x.timeOff ?? []), { ...t, id: uid('off') }] }));
+          return ok(undefined);
+        },
+        removeTimeOff: (id) => patchArtisan(me().userId!, (x) => ({ timeOff: (x.timeOff ?? []).filter((t) => t.id !== id) })),
+        updateWorker: (workerId, p) => patchArtisan(me().userId!, (a) => ({ workers: a.workers.map((w) => (w.id === workerId ? { ...w, ...p } : w)) })),
+        removeWorker: (workerId) => {
+          const a = artisanById(me().userId!);
+          if (!a) return fail('Not found.');
+          if (get().jobs.some((j) => j.workerId === workerId && Esc.ACTIVE_STATUSES.includes(j.status))) return fail('This worker has active jobs. Reassign them first.');
+          patchArtisan(a.id, (x) => ({ workers: x.workers.filter((w) => w.id !== workerId) }));
+          return ok(undefined);
+        },
+        completeBusinessOnboarding: (d) => {
+          const a = artisanById(me().userId!);
+          if (!a || a.accountType === 'individual') return fail('Team and Agency accounts only.');
+          if (a.accountType === 'agency' && !/^(RC|BN)?\s?\d{5,8}$/i.test((d.cacNumber ?? '').trim())) return fail('Agencies need a valid CAC registration number (e.g. RC 1234567).');
+          if (!d.serviceAreas.length) return fail('Add at least one area you serve.');
+          patchArtisan(a.id, () => ({ business: { ...d, completedOnboarding: true } }));
+          return ok(undefined);
+        },
+        submitCertificate: (categoryId, media, workerId) => {
+          const id = me().userId!;
+          if (media.purpose !== 'certificate') return fail('Take the certificate photo in the app.');
+          const upd = (skills: SkillVerification[]) => skills.map((k) => (k.categoryId === categoryId ? { ...k, certificate: media, status: k.status === 'needs_more' || k.status === 'rejected' ? ('in_review' as const) : k.status } : k));
+          if (workerId) patchArtisan(id, (a) => ({ workers: a.workers.map((w) => (w.id === workerId ? { ...w, skills: upd(w.skills) } : w)) }));
+          else patchArtisan(id, (a) => ({ skills: upd(a.skills) }));
+          for (const adm of adminIds()) notify(adm, 'Certificate uploaded', `${nameOf(id)} — ${category(categoryId).name}`, '/admin/verifications', 'verification');
+          return ok(undefined);
+        },
+
+        // ---- shared extras ---------------------------------------------------
+        raiseSafetyAlert: (kind, note, jobId) => {
+          const s0 = me();
+          const alert: SafetyAlert = { id: uid('sos'), userId: s0.userId!, role: s0.role === 'artisan' ? 'artisan' : 'customer', jobId, kind, note: note.trim(), at: nowIso(), status: 'open' };
+          set((s) => ({ safetyAlerts: [alert, ...s.safetyAlerts] }));
+          if (jobId) patchJob(jobId, (x) => ({ safetyAlertIds: [...(x.safetyAlertIds ?? []), alert.id] }));
+          if (kind !== 'shared_with_contact') {
+            for (const id of adminIds()) notify(id, kind === 'sos' ? '🚨 SOS from a user' : 'Safety concern reported', `${nameOf(alert.userId)}${jobId ? ` · job ${jobId.slice(-6).toUpperCase()}` : ''}${note ? ` — ${note.slice(0, 60)}` : ''}`, '/safety-queue', 'safety');
+            notify(alert.userId, 'Sleek Safety has been alerted', 'A safety agent will contact you in the app within minutes. If you are in danger, call 112.', '/trust-safety', 'safety');
+          }
+          return alert;
+        },
+        setNotificationPref: (category, enabled) =>
+          set((s) => {
+            const id = s.session.userId!;
+            const cur = s.notificationPrefs[id] ?? DEFAULT_NOTIFICATION_PREFS;
+            return { notificationPrefs: { ...s.notificationPrefs, [id]: { ...cur, enabled: { ...cur.enabled, [category]: enabled } } } };
+          }),
+        setQuietHours: (q) =>
+          set((s) => {
+            const id = s.session.userId!;
+            const cur = s.notificationPrefs[id] ?? DEFAULT_NOTIFICATION_PREFS;
+            return { notificationPrefs: { ...s.notificationPrefs, [id]: { ...cur, quietHours: q } } };
+          }),
+        setLanguage: (l) => set((s) => ({ settings: { ...s.settings, language: l } })),
+        dismissTip: (tipId) => set((s) => ({ settings: { ...s.settings, seenTips: [...new Set([...(s.settings.seenTips ?? []), tipId])] } })),
+        setNetwork: (n) => {
+          const wasOffline = !get().network.online;
+          set({ network: n });
+          if (wasOffline && n.online) get().flushOutbox();
+        },
+        flushOutbox: () => {
+          const queued = get().outbox;
+          if (!queued.length || isOffline()) return;
+          set({ outbox: [] });
+          for (const m of queued) set((s) => ({ messages: [...s.messages, { id: m.id, jobId: m.jobId, from: m.from, kind: 'text', text: m.text, at: m.at }] }));
+        },
+
+        // ---- admin extras ------------------------------------------------------
+        updateSafetyAlert: (id, status) => {
+          const a = get().safetyAlerts.find((x) => x.id === id);
+          set((s) => ({ safetyAlerts: s.safetyAlerts.map((x) => (x.id === id ? { ...x, status, handledBy: s.session.userId, handledAt: nowIso() } : x)) }));
+          if (a && status === 'acknowledged') notify(a.userId, 'Sleek Safety is on it', 'A safety agent has seen your alert and is following up.', '/trust-safety', 'safety');
+        },
+        addAdminNote: (targetType, targetId, text) => {
+          if (me().role !== 'admin') return fail('Admins only.');
+          if (text.trim().length < 3) return fail('Write a note.');
+          set((s) => ({ adminNotes: [{ id: uid('an'), targetType, targetId, by: s.session.userId!, text: text.trim(), at: nowIso() }, ...s.adminNotes] }));
+          return ok(undefined);
+        },
+        decideGuaranteeClaim: (id, approve, payout) => {
+          if (me().role !== 'admin') return fail('Admins only.');
+          const c = get().guaranteeClaims.find((x) => x.id === id);
+          const j = c && job(c.jobId);
+          if (!c || !j) return fail('Claim not found.');
+          if (c.status !== 'submitted') return fail('Already decided.');
+          const amount = approve ? Math.min(protectionCover(j), Math.max(0, Math.round(payout))) : 0;
+          set((s) => ({ guaranteeClaims: s.guaranteeClaims.map((x) => (x.id === id ? { ...x, status: approve ? 'approved' : 'declined', payout: amount } : x)) }));
+          notify(c.customerId, approve ? 'Protection claim approved' : 'Protection claim declined', approve ? `Sleek will pay ${naira(amount)} to your original payment method.` : 'After review, this issue isn’t covered. See Help for details.', `/job/${j.id}`, 'disputes');
+          return ok(undefined);
+        },
+
         // ---- jobs ----------------------------------------------------------
         createJob: (input) => {
+          if (isOffline()) return fail(OFFLINE_ACTION);
           const s = me();
           if (s.role !== 'customer' || !s.userId) return fail('Only customers can book artisans.');
           const customer = get().customers.find((c) => c.id === s.userId)!;
@@ -353,11 +703,17 @@ export const useStore = create<State>()(
             if (party === 'artisan') patchArtisan(userId, (a) => ({ stats: { ...a.stats, ruleViolations: a.stats.ruleViolations + 1, lastViolationAt: nowIso() } }));
             return res;
           }
+          if (isOffline()) {
+            // Already checked by the content guard; queued and sent automatically when the network is back.
+            set((s) => ({ outbox: [...s.outbox, { id: uid('msg'), jobId, from: party, text: text.trim(), at: nowIso() }] }));
+            return res;
+          }
           set((s) => ({ messages: [...s.messages, { id: uid('msg'), jobId, from: party, kind: 'text', text: text.trim(), at: nowIso() }] }));
           return res;
         },
 
         proposePrice: (jobId, amount, note) => {
+          if (isOffline()) return fail(OFFLINE_ACTION);
           const j = job(jobId);
           const party = j && myParty(j);
           if (!j || !party) return fail('Job not found.');
@@ -380,6 +736,7 @@ export const useStore = create<State>()(
         },
 
         acceptPrice: (jobId) => {
+          if (isOffline()) return fail(OFFLINE_ACTION);
           const j = job(jobId);
           const party = j && myParty(j);
           if (!j || !party) return fail('Job not found.');
@@ -434,6 +791,7 @@ export const useStore = create<State>()(
           } else if (!workerFreeFor(get().jobs, a, a.id, j.window)) {
             return fail('The artisan was just booked for an overlapping time. Please choose another time.');
           }
+          if (isOffline()) return fail(OFFLINE);
           const res = await payments.fundEscrow({ jobId, amount: j.pricePool.locked!.amount, method });
           if (!res.ok) return fail(res.error ?? 'Payment failed. You have not been charged.');
           const fresh = job(jobId)!;
@@ -461,7 +819,7 @@ export const useStore = create<State>()(
           const j = job(jobId);
           if (!j || myParty(j) !== 'artisan') return fail('Only the artisan can start the job.');
           if (!Esc.canStart(j, Date.now())) return fail('You can start from 1 hour before the agreed time, once escrow is funded.');
-          patchJob(jobId, (x) => ({ status: 'in_progress', timeline: timeline(x, 'Artisan started work', 'artisan') }));
+          patchJob(jobId, (x) => ({ status: 'in_progress', startedAt: nowIso(), enRouteAt: x.enRouteAt, timeline: timeline(x, 'Artisan started work', 'artisan') }));
           sys(jobId, 'The artisan has started work.');
           notify(j.customerId, 'Work started', `Your artisan has started “${j.title}”.`, `/job/${jobId}`);
           return ok(undefined);
@@ -486,6 +844,7 @@ export const useStore = create<State>()(
         },
 
         submitProof: (jobId, photos, note) => {
+          if (isOffline()) return fail(OFFLINE_ACTION);
           const j = job(jobId);
           if (!j || myParty(j) !== 'artisan') return fail('Only the artisan can upload proof of work.');
           if (!Esc.canSubmitProof(j)) return fail('Start the job before uploading proof of work.');
@@ -501,6 +860,7 @@ export const useStore = create<State>()(
         },
 
         approveJob: (jobId) => {
+          if (isOffline()) return fail(OFFLINE_ACTION);
           const j = job(jobId);
           if (!j || myParty(j) !== 'customer') return fail('Only the customer can approve.');
           if (!Esc.canApprove(j)) return fail('There is nothing to approve yet.');
@@ -509,6 +869,7 @@ export const useStore = create<State>()(
         },
 
         cancelJob: (jobId, reason) => {
+          if (isOffline()) return fail(OFFLINE_ACTION);
           const j = job(jobId);
           const party = j && myParty(j);
           if (!j || !party) return fail('Job not found.');
@@ -546,6 +907,7 @@ export const useStore = create<State>()(
         },
 
         openDispute: (jobId, reason, details, evidence) => {
+          if (isOffline()) return fail(OFFLINE_ACTION);
           const j = job(jobId);
           const party = j && myParty(j);
           if (!j || !party) return fail('Job not found.');
@@ -570,6 +932,20 @@ export const useStore = create<State>()(
 
         tick: (now = Date.now()) => {
           for (const j of get().jobs) if (Esc.dueForAutoRelease(j, now)) releaseToArtisan(j, 'auto_release');
+          // Scheduled payouts (server-side cron in production).
+          for (const a of get().artisans) {
+            const sched = a.payoutSchedule ?? DEFAULT_SCHEDULE;
+            const due = a.payoutAccount?.verified ? autoPayoutDue(sched, balanceOf(get().ledger, a.id), now) : 0;
+            if (due > 0) {
+              const at = new Date(now).toISOString();
+              set((s) => ({
+                payouts: [{ id: uid('po'), artisanId: a.id, amount: due, status: 'processing', requestedAt: at }, ...s.payouts],
+                ledger: [{ id: uid('led'), artisanId: a.id, type: 'payout', amount: -due, at, note: `Scheduled payout to ${a.payoutAccount!.bankName} ••${a.payoutAccount!.accountNumberLast4}` }, ...s.ledger],
+              }));
+              patchArtisan(a.id, () => ({ payoutSchedule: { ...sched, lastAutoPayoutAt: at } }));
+              notify(a.id, 'Scheduled payout sent', `${naira(due)} is on its way to your bank.`, '/earnings', 'payments');
+            }
+          }
           // Progress service orders (server-driven in production).
           const steps: Order['status'][] = ['placed', 'confirmed', 'dispatched', 'delivered'];
           set((s) => ({
@@ -679,6 +1055,7 @@ export const useStore = create<State>()(
           if (!a.payoutAccount?.verified) return fail('Add and verify a payout bank account first.');
           const balance = get().ledger.filter((l) => l.artisanId === id).reduce((sum, l) => sum + l.amount, 0);
           if (amount > balance) return fail(`You can withdraw up to ${naira(balance)}.`);
+          if (isOffline()) return fail(OFFLINE);
           const res = await payments.requestPayout({ artisanId: id, amount });
           if (!res.ok) return fail(res.error!);
           const at = nowIso();
@@ -746,6 +1123,7 @@ export const useStore = create<State>()(
           if (!address.trim()) return fail('Add a delivery address.');
           const totals = cartTotals(lines);
           const id = uid('ord');
+          if (isOffline()) return fail(OFFLINE);
           const res = await payments.payOrder({ orderId: id, amount: totals.total, method });
           if (!res.ok) return fail(res.error!);
           const at = nowIso();
@@ -777,15 +1155,16 @@ export const useStore = create<State>()(
     },
     {
       name: 'sleek-store',
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (s) => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { hydrated, ...rest } = s;
+        const { hydrated, network, ...rest } = s;
         return Object.fromEntries(Object.entries(rest).filter(([, v]) => typeof v !== 'function')) as unknown as State;
       },
       onRehydrateStorage: () => () => useStore.setState({ hydrated: true }),
-      migrate: () => ({ ...initialData() }) as unknown as State,
+      // v1 → v2 added history, favourites, referrals and more. Demo data is re-seeded; theme is kept.
+      migrate: (old) => ({ ...initialData(), settings: { ...initialData().settings, themeMode: (old as Partial<State>)?.settings?.themeMode ?? 'system' } }) as unknown as State,
     },
   ),
 );

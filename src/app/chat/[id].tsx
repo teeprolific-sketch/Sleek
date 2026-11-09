@@ -3,6 +3,9 @@ import React, { useMemo, useRef, useState } from 'react';
 import { FlatList, Image, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { confirmAction, JobStatusPill, showMessage } from '../../components/domain';
+import { AutoReleaseCountdown, EscrowBadge, NetworkBanner } from '../../components/feedback';
+import { SafetyButton } from '../../components/jobParts';
+import { useT } from '../../i18n';
 import { Banner, Button, Icon, Row, Txt, toneColors } from '../../components/ui';
 import { category } from '../../data/categories';
 import { isLocationDisclosed } from '../../domain/escrow';
@@ -25,11 +28,19 @@ export default function Chat() {
   const sendMessage = useStore((s) => s.sendMessage);
   const addIssuePhoto = useStore((s) => s.addIssuePhoto);
   const logCapture = useStore((s) => s.logCapture);
+  const t = useT();
+  const outboxAll = useStore((s) => s.outbox);
   const [text, setText] = useState('');
   const [blocked, setBlocked] = useState<string | null>(null);
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
-  const messages = useMemo(() => allMessages.filter((m) => m.jobId === id), [allMessages, id]);
+  const messages = useMemo(
+    () => [
+      ...allMessages.filter((m) => m.jobId === id),
+      ...outboxAll.filter((m) => m.jobId === id).map((m): ChatMessage & { queued?: boolean } => ({ id: m.id, jobId: m.jobId, from: m.from, kind: 'text', text: m.text, at: m.at, queued: true })),
+    ],
+    [allMessages, outboxAll, id],
+  );
   const live = useMemo(() => (text.trim().length > 3 ? moderateMessage(text) : null), [text]);
 
   if (!job || !artisan || !customer) {
@@ -80,8 +91,9 @@ export default function Chat() {
             {job.title} · {category(job.categoryId).name}
           </Txt>
         </Pressable>
-        <JobStatusPill status={job.status} />
+        {['funded', 'in_progress', 'proof_submitted', 'disputed'].includes(job.status) && disclosed ? <SafetyButton job={job} compact /> : <JobStatusPill status={job.status} />}
       </Row>
+      <NetworkBanner />
 
       {/* Job strip */}
       <Row style={{ paddingHorizontal: space.md, paddingVertical: space.sm, backgroundColor: c.surface }} gap={space.md}>
@@ -98,6 +110,10 @@ export default function Chat() {
           </Txt>
         </Row>
       </Row>
+      <Row style={{ paddingHorizontal: space.md, paddingTop: space.sm, justifyContent: 'space-between' }}>
+        <EscrowBadge job={job} compact />
+        <AutoReleaseCountdown job={job} compact />
+      </Row>
 
       <PricePoolPanel job={job} party={party} />
 
@@ -108,18 +124,18 @@ export default function Chat() {
           keyExtractor={(m) => m.id}
           contentContainerStyle={{ padding: space.md, gap: space.sm }}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-          renderItem={({ item }) => <Bubble m={item} mine={item.from === party} job={job} />}
+          renderItem={({ item }) => <Bubble m={item} mine={item.from === party} job={job} queuedLabel={(item as { queued?: boolean }).queued ? t('chat.queued') : undefined} />}
           initialNumToRender={20}
           windowSize={7}
         />
 
         {blocked ? (
           <View style={{ paddingHorizontal: space.md, paddingBottom: space.sm }}>
-            <Banner tone="danger" icon="ban-outline" title="Message blocked" body={blocked} action="Read the chat rules" onAction={() => router.push('/trust-safety')} />
+            <Banner tone="danger" icon="ban-outline" title={t('chat.blocked')} body={blocked} action={t('chat.rules')} onAction={() => router.push('/trust-safety')} />
           </View>
         ) : live && !live.allowed ? (
           <View style={{ paddingHorizontal: space.md, paddingBottom: space.sm }}>
-            <Banner tone="warning" icon="warning-outline" body="This message looks like it contains contact details or an off-app request. It won’t be sent." />
+            <Banner tone="warning" icon="warning-outline" body={t('chat.looksLikeContact')} />
           </View>
         ) : null}
 
@@ -147,7 +163,7 @@ export default function Chat() {
                 setText(t);
                 if (blocked) setBlocked(null);
               }}
-              placeholder="Type a message"
+              placeholder={t('chat.placeholder')}
               placeholderTextColor={c.textMuted}
               multiline
               maxLength={1000}
@@ -169,7 +185,7 @@ export default function Chat() {
   );
 }
 
-function Bubble({ m, mine, job }: { m: ChatMessage; mine: boolean; job: Job }) {
+function Bubble({ m, mine, job, queuedLabel }: { m: ChatMessage; mine: boolean; job: Job; queuedLabel?: string }) {
   const { c } = useTheme();
   if (m.kind === 'system') {
     return (
@@ -225,7 +241,7 @@ function Bubble({ m, mine, job }: { m: ChatMessage; mine: boolean; job: Job }) {
         )}
       </View>
       <Txt v="tiny" muted style={{ alignSelf: mine ? 'flex-end' : 'flex-start', marginTop: 2 }}>
-        {time(m.at)}
+        {queuedLabel ? `⏳ ${queuedLabel}` : time(m.at)}
       </Txt>
     </View>
   );

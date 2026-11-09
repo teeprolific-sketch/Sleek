@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
 import { AvailabilityPill, BadgeRow, JobCard, showMessage } from '../../components/domain';
+import { CoachTip } from '../../components/feedback';
 import { Banner, Card, EmptyState, Icon, IconButton, Row, Screen, Section, Stat, Toggle, Txt } from '../../components/ui';
 import { availabilityNow } from '../../domain/availability';
 import { displayRating, identityVerified, trustScore } from '../../domain/trust';
@@ -63,6 +64,12 @@ export default function ArtisanDashboard() {
         </Row>
       </Card>
 
+      {me.business && !me.business.completedOnboarding ? (
+        <View style={{ marginTop: space.md }}>
+          <Banner tone="primary" icon="business-outline" title={`Finish setting up your ${me.accountType}`} body="Business details, workers, payout account and calendar — about 5 minutes." action="Continue setup" onAction={() => router.push('/onboarding-business')} />
+        </View>
+      ) : null}
+      <CoachTip id="tip_artisan_flow" title="How you get paid on Sleek" body="Agree a price in chat → customer pays into escrow → tap “I’m on my way”, start, upload proof → you’re paid when they approve (or automatically if they don’t respond)." icon="wallet-outline" />
       {!verified || !hasSkill ? (
         <View style={{ marginTop: space.md }}>
           <Banner tone="warning" icon="finger-print-outline" title="Finish verification to get jobs" body={!verified ? 'Verify your NIN and face first. It takes about 3 minutes.' : 'Record a proof-of-work video for at least one skill.'} action="Continue verification" onAction={() => router.push('/verify')} />
@@ -137,6 +144,12 @@ export default function ArtisanDashboard() {
             <Icon name="ribbon-outline" color={c.primary} />
             <Txt v="bodyStrong" style={{ marginTop: 6 }}>
               Verify a skill
+            </Txt>
+          </Card>
+          <Card style={{ flex: 1 }} onPress={() => router.push('/insights')}>
+            <Icon name="stats-chart-outline" color={c.primary} />
+            <Txt v="bodyStrong" style={{ marginTop: 6 }}>
+              Insights
             </Txt>
           </Card>
           <Card style={{ flex: 1 }} onPress={() => router.push('/shop')}>

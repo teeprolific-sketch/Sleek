@@ -26,12 +26,13 @@ export default function RoleSelect() {
   const [city, setCity] = useState('Lagos');
   const [area, setArea] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [referral, setReferral] = useState('');
 
   const submit = () => {
     if (name.trim().split(/\s+/).length < 2) return setError('Enter your first and last name as on your NIN.');
     if (choice !== 'customer' && choice !== 'individual' && business.trim().length < 2) return setError('Enter your team or agency name.');
     if (area.trim().length < 2) return setError('Enter your area, e.g. Yaba.');
-    register({
+    const res = register({
       phone: phone ?? '',
       name: name.trim(),
       role: choice === 'customer' ? 'customer' : 'artisan',
@@ -39,8 +40,10 @@ export default function RoleSelect() {
       businessName: business.trim() || undefined,
       city,
       area: area.trim(),
+      referralCode: referral.trim() || undefined,
     });
-    router.replace(choice === 'customer' ? '/home' : '/verify');
+    if (!res.ok) return setError(res.error);
+    router.replace(choice === 'customer' ? '/home' : choice === 'individual' ? '/verify' : '/onboarding-business');
   };
 
   return (
@@ -83,7 +86,8 @@ export default function RoleSelect() {
           <Chip key={x} label={x} selected={city === x} onPress={() => setCity(x)} />
         ))}
       </Row>
-      <Field label="Area" value={area} onChangeText={setArea} placeholder="e.g. Yaba" error={error} />
+      <Field label="Area" value={area} onChangeText={setArea} placeholder="e.g. Yaba" />
+      <Field label="Referral code (optional)" value={referral} onChangeText={(t) => setReferral(t.toUpperCase())} placeholder="e.g. AMAKA1234" autoCapitalize="characters" error={error} />
       {choice !== 'customer' ? (
         <Txt v="small" muted>
           Next you’ll verify your identity (NIN + face) and record a short video for each skill. You can only receive jobs for skills that are verified.

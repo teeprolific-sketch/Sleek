@@ -3,6 +3,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { confirmAction } from '../components/domain';
 import { Logo } from '../components/Logo';
+import { useT } from '../i18n';
 import { Avatar, Card, ListItem, Row, Screen, Section, Segmented, Txt } from '../components/ui';
 import type { ThemeMode } from '../domain/types';
 import { useCurrentUser, useStore, useUnreadCount } from '../store';
@@ -16,6 +17,8 @@ export default function Account({ children }: { children?: React.ReactNode }) {
   const setTheme = useStore((s) => s.setTheme);
   const signOut = useStore((s) => s.signOut);
   const unread = useUnreadCount();
+  const t = useT();
+  const lang = useStore((s) => s.settings.language ?? 'en');
   if (!user) return null;
   const display = user.role === 'artisan' ? user.businessName ?? user.name : user.name;
   const sub = user.role === 'artisan' ? `${user.accountType === 'individual' ? 'Artisan' : user.accountType === 'team' ? 'Team account' : 'Agency account'} · ${user.area}, ${user.city}` : user.role === 'customer' ? `${user.area}, ${user.city}` : 'Sleek Trust & Safety';
@@ -53,9 +56,14 @@ export default function Account({ children }: { children?: React.ReactNode }) {
 
       <Section title="General">
         <ListItem icon="notifications-outline" title="Notifications" subtitle={unread ? `${unread} unread` : 'All caught up'} onPress={() => router.push('/notifications')} />
+        <ListItem icon="notifications-off-outline" title={t('settings.notifications')} subtitle="Choose what reaches your phone, quiet hours" onPress={() => router.push('/notification-settings')} />
+        <ListItem icon="language-outline" title={t('settings.language')} subtitle={lang === 'pcm' ? 'Naija (Pidgin)' : 'English'} onPress={() => router.push('/settings')} />
+        {user.role !== 'admin' ? <ListItem icon="time-outline" title="Job history" subtitle="Completed, cancelled and disputed jobs" onPress={() => router.push('/history')} /> : null}
+        {user.role !== 'admin' ? <ListItem icon="flag-outline" title={t('dispute.centre')} subtitle="Open, follow and read decisions" onPress={() => router.push('/disputes')} /> : null}
+        {user.role !== 'admin' ? <ListItem icon="gift-outline" title="Refer & earn" subtitle="Invite friends and artisans" onPress={() => router.push('/referrals')} /> : null}
         <ListItem icon="sparkles-outline" title="Ugent assistant" subtitle="Let Me AI’s agent book for you, with your confirmation" onPress={() => router.push('/ugent')} />
         <ListItem icon="settings-outline" title="Settings & privacy" onPress={() => router.push('/settings')} />
-        <ListItem icon="shield-checkmark-outline" title="Trust & Safety centre" onPress={() => router.push('/trust-safety')} />
+        <ListItem icon="shield-checkmark-outline" title="Help & Safety Centre" subtitle="Safety tools, rules, trusted contact" onPress={() => router.push('/trust-safety')} />
         <ListItem icon="help-circle-outline" title="Help & Support" onPress={() => router.push('/help')} />
         <ListItem
           icon="log-out-outline"

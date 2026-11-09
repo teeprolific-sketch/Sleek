@@ -42,8 +42,10 @@ export default function EscrowPayment() {
       footer={
         canFund(job) ? (
           <Button title={`Pay ${naira(amount)} into escrow`} icon="lock-closed" loading={loading} onPress={pay} />
-        ) : (
+        ) : job.escrow.state === 'held' || job.escrow.state === 'frozen' ? (
           <Banner tone="success" body="This job is already funded." />
+        ) : (
+          <Banner tone="warning" body="Agree and lock a price in the chat’s Price Pool first. Then you can pay into escrow." action="Open chat" onAction={() => router.replace({ pathname: '/chat/[id]', params: { id: job.id } })} />
         )
       }
     >

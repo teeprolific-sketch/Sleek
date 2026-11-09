@@ -6,7 +6,10 @@ import { AVAILABILITY_LABEL, type AvailabilityState } from '../domain/availabili
 import { STATUS_LABEL, STATUS_TONE } from '../domain/escrow';
 import { badgesFor, displayRating, type Badge } from '../domain/trust';
 import type { Artisan, Job } from '../domain/types';
+import { useT, type TKey } from '../i18n';
 import { space, useTheme } from '../theme';
+import { AutoReleaseCountdown, EscrowBadge } from './feedback';
+import { FavouriteButton } from './jobParts';
 import { naira, windowLabel } from '../utils/format';
 import { Avatar, Card, Icon, Pill, Row, Stars, Txt } from './ui';
 
@@ -28,7 +31,8 @@ export function confirmAction(title: string, message: string, confirmLabel: stri
 }
 
 export function JobStatusPill({ status }: { status: Job['status'] }) {
-  return <Pill label={STATUS_LABEL[status]} tone={STATUS_TONE[status]} />;
+  const t = useT();
+  return <Pill label={t(`status.${status}` as TKey) || STATUS_LABEL[status]} tone={STATUS_TONE[status]} />;
 }
 
 export function AvailabilityPill({ state }: { state: AvailabilityState }) {
@@ -56,7 +60,7 @@ export function BadgeRow({ artisan, limit, only }: { artisan: Artisan; limit?: n
   );
 }
 
-export function ArtisanCard({ artisan, categoryId, rank, freeWorkers }: { artisan: Artisan; categoryId?: string; rank?: number; freeWorkers?: number }) {
+export function ArtisanCard({ artisan, categoryId, rank, freeWorkers, distanceKm }: { artisan: Artisan; categoryId?: string; rank?: number; freeWorkers?: number; distanceKm?: number | null }) {
   const { c } = useTheme();
   const rating = displayRating(artisan);
   const price = categoryId ? artisan.startingPrices[categoryId] : Object.values(artisan.startingPrices)[0];
@@ -74,6 +78,7 @@ export function ArtisanCard({ artisan, categoryId, rank, freeWorkers }: { artisa
                 #{rank}
               </Txt>
             ) : null}
+            <FavouriteButton artisanId={artisan.id} size={20} />
           </Row>
           <Txt v="small" muted numberOfLines={1}>
             {artisan.skills.filter((s) => s.status === 'approved').map((s) => categoryName(s.categoryId)).join(' · ')}
@@ -88,6 +93,7 @@ export function ArtisanCard({ artisan, categoryId, rank, freeWorkers }: { artisa
             <Icon name="location-outline" size={13} color={c.textMuted} />
             <Txt v="small" muted>
               {artisan.area}, {artisan.city}
+              {distanceKm != null ? ` · ${distanceKm < 1 ? 'same area' : `~${distanceKm} km`}` : ''}
             </Txt>
             {freeWorkers && artisan.accountType !== 'individual' ? (
               <Txt v="small" color={c.success}>
@@ -142,6 +148,10 @@ export function JobCard({ job, artisan, counterpartName, onPress }: { job: Job; 
           </Txt>
         </Row>
         <Txt v="bodyStrong">{job.pricePool.locked ? naira(job.pricePool.locked.amount) : 'Price not set'}</Txt>
+      </Row>
+      <Row style={{ justifyContent: 'space-between', marginTop: space.sm }}>
+        <EscrowBadge job={job} compact />
+        <AutoReleaseCountdown job={job} compact />
       </Row>
       {job.origin === 'ugent' ? (
         <Row gap={4} style={{ marginTop: 6 }}>

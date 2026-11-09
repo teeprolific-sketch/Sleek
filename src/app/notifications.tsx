@@ -17,13 +17,18 @@ export default function Notifications() {
     <Screen
       title="Notifications"
       right={
-        list.some((n) => !n.read) ? (
+        <Row gap={space.md}>
+          <Pressable onPress={() => router.push('/notification-settings')} hitSlop={8} accessibilityLabel="Notification settings">
+            <Icon name="settings-outline" size={20} />
+          </Pressable>
+          {list.some((n) => !n.read) ? (
           <Pressable onPress={markAllRead} hitSlop={8}>
             <Txt v="small" color={c.primary}>
               Mark all read
             </Txt>
           </Pressable>
-        ) : undefined
+          ) : null}
+        </Row>
       }
     >
       {list.length ? (
@@ -45,6 +50,7 @@ export default function Notifications() {
                 </Txt>
                 <Txt v="tiny" muted style={{ marginTop: 4 }}>
                   {relative(n.at)}
+                  {n.silent ? ' · not pushed (your settings)' : ''}
                 </Txt>
               </View>
               {n.link ? <Icon name="chevron-forward" size={16} color={c.textMuted} /> : null}

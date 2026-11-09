@@ -83,6 +83,8 @@ export interface SkillVerification {
   /** Extra evidence required for high-risk trades (e.g. COREN/NABTEB certificate). */
   certificateRequired?: boolean;
   certificateProvided?: boolean;
+  /** Photo of the trade certificate/licence, captured in-app (high-risk trades). */
+  certificate?: CapturedMedia;
 }
 
 // ---------------------------------------------------------------------------
@@ -108,6 +110,35 @@ export interface Customer {
   addresses: Address[];
   joinedAt: ISODate;
   identity?: IdentityVerification;
+  /** Saved / favourite artisans. */
+  favourites?: ID[];
+  prefs?: MatchingPrefs;
+  /** Ratings artisans gave this customer (two-way reviews). */
+  customerStats?: CustomerStats;
+  /** Someone the customer can share live job details with in an emergency. */
+  trustedContact?: { name: string; phone: string };
+  /** Sleek credit (referral rewards), usable on Sleek Services. */
+  credit?: number;
+  referralCode?: string;
+}
+
+export type GenderPreference = 'any' | 'female' | 'male';
+
+export interface MatchingPrefs {
+  genderPreference: GenderPreference;
+  minRating: number; // 0 = any
+  trustedOnly: boolean;
+  maxDistanceKm: number | null;
+  availableToday: boolean;
+  priceMin?: number;
+  priceMax?: number;
+}
+
+export interface CustomerStats {
+  ratingCount: number;
+  professionalismSum: number;
+  claritySum: number;
+  paymentSum: number;
 }
 
 export interface Worker {
@@ -118,6 +149,11 @@ export interface Worker {
   skills: SkillVerification[];
   active: boolean;
   avatarColor: string;
+  /** Supervisors can accept jobs and manage the shared calendar. */
+  role?: 'member' | 'supervisor';
+  joinedAt?: ISODate;
+  /** Internal note from the owner (not shown to customers). */
+  ownerNote?: string;
 }
 
 export interface TrustStats {
@@ -159,6 +195,35 @@ export interface Artisan {
   joinedAt: ISODate;
   avatarColor: string;
   payoutAccount?: PayoutAccount;
+  payoutSchedule?: PayoutSchedule;
+  gender?: 'female' | 'male';
+  /** Days/periods the artisan is not taking jobs (holiday, sick, travel). */
+  timeOff?: TimeOff[];
+  referralCode?: string;
+  /** Team/Agency business details collected in the dedicated onboarding flow. */
+  business?: BusinessDetails;
+}
+
+export interface TimeOff {
+  id: ID;
+  start: ISODate;
+  end: ISODate;
+  reason: string;
+}
+
+export interface BusinessDetails {
+  cacNumber?: string; // CAC registration (required for agencies)
+  serviceAreas: string[];
+  teamSize: number;
+  completedOnboarding: boolean;
+}
+
+export interface PayoutSchedule {
+  /** manual = withdraw when you want; daily/weekly = automatic sweep of the available balance. */
+  mode: 'manual' | 'daily' | 'weekly';
+  weekday?: number; // 0..6 for weekly
+  minimum: number; // don't auto-pay below this amount
+  lastAutoPayoutAt?: ISODate;
 }
 
 export interface PayoutAccount {
@@ -249,7 +314,8 @@ export type UploadPurpose =
   | 'site_before' // artisan: before starting
   | 'proof_of_work' // artisan: after finishing
   | 'dispute_evidence'
-  | 'delivery_confirmation';
+  | 'delivery_confirmation'
+  | 'certificate';
 
 export interface JobTimelineEvent {
   at: ISODate;
@@ -294,6 +360,106 @@ export interface Job {
   timeline: JobTimelineEvent[];
   /** Set when the booking was initiated by Ugent on the user's behalf. */
   origin: 'app' | 'ugent';
+  /** Artisan tapped "I'm on my way". */
+  enRouteAt?: ISODate;
+  startedAt?: ISODate;
+  extensions?: ExtensionRequest[];
+  tip?: { amount: number; at: ISODate; reference: string };
+  /** The artisan's rating of the customer (two-way reviews). */
+  customerReviewId?: ID;
+  safetyAlertIds?: ID[];
+  guaranteeClaimId?: ID;
+}
+
+export interface ExtensionRequest {
+  id: ID;
+  extraMinutes: number;
+  newEnd: ISODate;
+  reason: string;
+  status: 'pending' | 'approved' | 'declined';
+  at: ISODate;
+  decidedAt?: ISODate;
+}
+
+export interface CustomerReview {
+  id: ID;
+  jobId: ID;
+  customerId: ID;
+  artisanId: ID;
+  professionalism: number; // 1..5
+  clarity: number; // 1..5 — was the job described clearly?
+  payment: number; // 1..5 — paid promptly, approved fairly
+  comment: string;
+  at: ISODate;
+}
+
+export type SafetyAlertKind = 'sos' | 'unsafe' | 'emergency_call' | 'shared_with_contact';
+
+export interface SafetyAlert {
+  id: ID;
+  userId: ID;
+  role: 'customer' | 'artisan';
+  jobId?: ID;
+  kind: SafetyAlertKind;
+  note: string;
+  at: ISODate;
+  status: 'open' | 'acknowledged' | 'resolved';
+  handledBy?: ID;
+  handledAt?: ISODate;
+}
+
+export interface GuaranteeClaim {
+  id: ID;
+  jobId: ID;
+  customerId: ID;
+  details: string;
+  evidence: CapturedMedia[];
+  status: 'submitted' | 'approved' | 'declined';
+  at: ISODate;
+  payout?: number;
+}
+
+export interface Referral {
+  id: ID;
+  code: string;
+  referrerId: ID;
+  refereeId: ID;
+  refereeName: string;
+  refereeRole: 'customer' | 'artisan';
+  status: 'pending' | 'qualified';
+  reward: number;
+  at: ISODate;
+  qualifiedAt?: ISODate;
+}
+
+export interface AdminNote {
+  id: ID;
+  targetType: 'user' | 'job' | 'dispute' | 'safety';
+  targetId: ID;
+  by: ID;
+  text: string;
+  at: ISODate;
+}
+
+export type NotificationCategory =
+  | 'job_requests'
+  | 'price_offers'
+  | 'escrow'
+  | 'job_progress'
+  | 'proof'
+  | 'payments'
+  | 'disputes'
+  | 'safety'
+  | 'reviews'
+  | 'verification'
+  | 'orders'
+  | 'referrals'
+  | 'promotions'
+  | 'system';
+
+export interface NotificationPrefs {
+  enabled: Partial<Record<NotificationCategory, boolean>>;
+  quietHours: { enabled: boolean; start: number; end: number };
 }
 
 export interface CancellationRecord {
@@ -432,6 +598,9 @@ export interface AppNotification {
   at: ISODate;
   read: boolean;
   link?: string;
+  category?: NotificationCategory;
+  /** Delivered to the inbox only (muted by the user's preferences or quiet hours). */
+  silent?: boolean;
 }
 
 export interface Payout {
@@ -447,7 +616,7 @@ export interface LedgerEntry {
   id: ID;
   artisanId: ID;
   jobId?: ID;
-  type: 'escrow_release' | 'payout' | 'cancellation_fee';
+  type: 'escrow_release' | 'payout' | 'cancellation_fee' | 'tip' | 'referral_bonus' | 'payout_reversal';
   amount: number; // positive credit, negative debit
   at: ISODate;
   note: string;

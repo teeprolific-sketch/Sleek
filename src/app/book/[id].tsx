@@ -21,14 +21,14 @@ const DURATIONS = [
 
 export default function Book() {
   const { c } = useTheme();
-  const { id, categoryId } = useLocalSearchParams<{ id: string; categoryId: string }>();
+  const { id, categoryId, title: preTitle, description: preDesc, rebook } = useLocalSearchParams<{ id: string; categoryId: string; title?: string; description?: string; rebook?: string }>();
   const artisan = useStore((s) => s.artisans.find((a) => a.id === id));
   const jobs = useStore((s) => s.jobs);
   const createJob = useStore((s) => s.createJob);
   const logCapture = useStore((s) => s.logCapture);
   const me = useMyCustomer();
-  const [title, setTitle] = useState('');
-  const [desc, setDesc] = useState('');
+  const [title, setTitle] = useState(preTitle ?? '');
+  const [desc, setDesc] = useState(preDesc ?? '');
   const [dayOffset, setDayOffset] = useState(0);
   const [duration, setDuration] = useState(120);
   const [slot, setSlot] = useState<TimeWindow | null>(null);
@@ -64,6 +64,11 @@ export default function Book() {
 
   return (
     <Screen title={`Request ${cat.name}`} subtitle={artisan.businessName ?? artisan.name} footer={<Button title="Send request & open chat" icon="send" onPress={submit} />}>
+      {rebook ? (
+        <View style={{ marginBottom: space.md }}>
+          <Banner tone="success" icon="repeat-outline" title={`Booking ${artisan.businessName ?? artisan.name.split(' ')[0]} again`} body="We’ve copied the details from your last job. Change anything you need, then pick a time." />
+        </View>
+      ) : null}
       <Field label="Job title" placeholder={`e.g. ${cat.id === 'mechanic' ? 'Car brakes squeaking' : cat.name + ' needed'}`} value={title} onChangeText={setTitle} />
       <Field label="What do you need?" placeholder="Describe the job, size, and anything the artisan should know." value={desc} onChangeText={setDesc} multiline hint="Don’t include phone numbers or addresses — Sleek shares your address after you pay into escrow." />
 

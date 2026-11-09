@@ -11,6 +11,8 @@ export default function CustomerProfile() {
     <Account>
       <Section title="My Sleek">
         <ListItem icon="briefcase-outline" title="My jobs" onPress={() => router.push('/jobs')} />
+        <ListItem icon="heart-outline" title="Saved artisans" subtitle={me?.favourites?.length ? `${me.favourites.length} saved` : 'None yet'} onPress={() => router.push('/favourites')} />
+        <ListItem icon="options-outline" title="Matching preferences" subtitle="Distance, rating, price, gender (where relevant)" onPress={() => router.push('/preferences')} />
         <ListItem icon="receipt-outline" title="Orders & deliveries" subtitle={orders ? `${orders} orders` : 'No orders yet'} onPress={() => router.push('/orders')} />
         <ListItem icon="location-outline" title="Saved addresses" subtitle={me?.addresses.map((a) => a.label).join(' · ')} onPress={() => router.push('/settings')} />
       </Section>

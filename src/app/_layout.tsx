@@ -1,8 +1,10 @@
-import { Stack } from 'expo-router';
+import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, AppState, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ErrorScreen, useNetworkWatcher } from '../components/feedback';
+import { translate, type Lang } from '../i18n';
 import { useStore } from '../store';
 import { brand, ThemeProvider, useTheme } from '../theme';
 
@@ -10,6 +12,7 @@ function Shell() {
   const { c, isDark } = useTheme();
   const hydrated = useStore((s) => s.hydrated);
   const tick = useStore((s) => s.tick);
+  useNetworkWatcher();
 
   // Auto-release timers and order progress. The server is the source of truth in
   // production; this keeps the UI honest while the app is open.
@@ -47,6 +50,19 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <Shell />
+      </ThemeProvider>
+    </SafeAreaProvider>
+  );
+}
+
+/** Any crash in a screen lands here instead of a blank page. */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  const lang = (useStore.getState().settings?.language ?? 'en') as Lang;
+  if (__DEV__) console.error(error);
+  return (
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <ErrorScreen title={translate(lang, 'error.title')} body={translate(lang, 'error.body')} onRetry={retry} />
       </ThemeProvider>
     </SafeAreaProvider>
   );

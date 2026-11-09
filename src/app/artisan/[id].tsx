@@ -2,6 +2,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
 import { AvailabilityPill, BadgeRow } from '../../components/domain';
+import { FavouriteButton } from '../../components/jobParts';
+import { areaDistanceKm } from '../../domain/geo';
 import { Avatar, Banner, Button, Card, Divider, Icon, KeyValue, Pill, Row, Screen, Section, Stars, Stat, Txt } from '../../components/ui';
 import { category, categoryName } from '../../data/categories';
 import { availabilityNow } from '../../domain/availability';
@@ -19,6 +21,7 @@ export default function ArtisanProfile() {
   const jobs = useStore((s) => s.jobs);
   const allReviews = useStore((s) => s.reviews);
   const role = useStore((s) => s.session.role);
+  const me = useStore((s) => s.customers.find((c) => c.id === s.session.userId));
   const reviews = useMemo(() => allReviews.filter((r) => r.artisanId === id), [allReviews, id]);
 
   if (!artisan) return <Screen title="Artisan">{<Txt>Not found.</Txt>}</Screen>;
@@ -34,6 +37,7 @@ export default function ArtisanProfile() {
   return (
     <Screen
       title={artisan.businessName ?? artisan.name}
+      right={<FavouriteButton artisanId={artisan.id} size={26} />}
       footer={
         role === 'customer' ? (
           <Button
@@ -64,6 +68,7 @@ export default function ArtisanProfile() {
             <AvailabilityPill state={state} />
             <Txt v="small" muted>
               {artisan.area}, {artisan.city}
+              {me && areaDistanceKm(me, artisan) != null ? ` · ~${areaDistanceKm(me, artisan)} km` : ''}
             </Txt>
           </Row>
         </View>

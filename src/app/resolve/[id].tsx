@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Image, ScrollView, View } from 'react-native';
+import { AdminNotes } from '../../components/AdminNotes';
 import { showMessage } from '../../components/domain';
 import { Banner, Button, Card, Chip, Field, KeyValue, Row, Screen, Section, Txt } from '../../components/ui';
 import { DISPUTE_REASONS } from '../../data/disputes';
@@ -85,6 +86,7 @@ export default function ResolveDispute() {
         </Card>
       </Section>
 
+      <AdminNotes targetType="dispute" targetId={dispute.id} />
       {dispute.status === 'resolved' && dispute.resolution ? (
         <Section title="Decision">
           <Banner tone="success" body={dispute.resolution.note} />

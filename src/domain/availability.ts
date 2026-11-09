@@ -75,10 +75,16 @@ export const AVAILABILITY_LABEL: Record<AvailabilityState, string> = {
   fully_booked: 'Fully Booked',
 };
 
+/** Holiday / sick / travel blocks set by the artisan. */
+export function onTimeOff(artisan: Artisan, window: TimeWindow): boolean {
+  return (artisan.timeOff ?? []).some((t) => overlaps(t, window, 0));
+}
+
 /** Current, real availability. Only `available` artisans are shown in search. */
 export function availabilityNow(jobs: Job[], artisan: Artisan, now: number): AvailabilityState {
   if (!artisan.online) return 'offline';
   if (!artisan.identity || artisan.identity.faceMatch !== 'passed') return 'offline';
+  if (onTimeOff(artisan, { start: new Date(now).toISOString(), end: new Date(now + 60_000).toISOString() })) return 'offline';
   const ids = workerIdsOf(artisan);
   const nowWindow: TimeWindow = { start: new Date(now).toISOString(), end: new Date(now + 60 * 60_000).toISOString() };
   const busy = ids.filter((wid) => !workerFreeFor(jobs, artisan, wid, nowWindow));
@@ -99,6 +105,7 @@ export function bookableFor(jobs: Job[], artisan: Artisan, categoryId: string, w
     return { ok: false, reason: 'Not skill-verified for this service.', workers: [] };
   }
   if (!withinWorkingHours(artisan, window)) return { ok: false, reason: 'Outside this artisan’s working hours.', workers: [] };
+  if (onTimeOff(artisan, window)) return { ok: false, reason: 'The artisan is on time off then.', workers: [] };
   const workers = freeWorkersFor(jobs, artisan, categoryId, window);
   if (workers.length === 0) return { ok: false, reason: 'Already booked for an overlapping time.', workers: [] };
   return { ok: true, workers };

@@ -1,5 +1,7 @@
 # Backend contract
 
+> **Implemented** in `server/` (see `server/src/app.ts` for the exact routes and request schemas). The table below maps each endpoint to the app store action it replaces.
+
 The mobile store (`src/store/index.ts`) is a faithful local implementation of the following API. Each endpoint **must** re-run the matching `src/domain` function on the server. All amounts are whole Naira. Auth is a phone OTP that returns a JWT. The admin role requires SSO + 2FA.
 
 | Method & path | Store action | Server-side rule |

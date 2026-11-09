@@ -54,12 +54,15 @@ docs/           Architecture, backend contract, Ugent integration, brand guide
 
 Read next: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · [docs/BACKEND_CONTRACT.md](docs/BACKEND_CONTRACT.md) · [docs/UGENT.md](docs/UGENT.md) · [docs/BRAND.md](docs/BRAND.md)
 
+## Backend
+
+`server/` holds the API: Fastify + PostgreSQL. It imports `src/domain`, so the server enforces exactly the rules the app shows. It covers auth (phone OTP), jobs, chat moderation, the Price Pool, Paystack escrow with signed webhooks, refunds, payouts, verification, teams, Sleek Services orders, disputes, the admin console, the Ugent gateway, and a scheduler for auto-release, expiry and suspensions. 17 integration tests run against a real Postgres, including concurrent double-booking. See [server/README.md](server/README.md).
+
 ## Production status
 
-The app is complete end to end against a **local simulated backend**: the Zustand store plus mock payment and identity adapters. Data persists on the device so every flow can be demoed offline. Before launch, these pieces have to be real:
+The app still runs against its **local simulated backend**: the Zustand store with mock adapters. That keeps every flow demoable offline. The real API in `server/` is built and tested. What's left before launch:
 
-1. **Backend API.** It implements `docs/BACKEND_CONTRACT.md` and re-runs the same `src/domain` rules on the server. The client is never trusted for money, moderation or availability.
-2. **Payments.** A licensed PSP (Paystack or Flutterwave) with an escrow or settlement account, webhooks and NUBAN name enquiry. Implement `PaymentGateway` in `src/services/payments.ts`.
-3. **Identity.** A NIMC-licensed KYC provider (Smile ID, Prembly, Youverify or Dojah) for NIN lookup, liveness and face match, including on skill videos. Implement `IdentityProvider` in `src/services/identity.ts`.
-4. **OTP over SMS/WhatsApp, push notifications, media storage** (encrypted, signed URLs), and a scheduled job on the server for auto-release.
-5. A **development build** (`npx expo run:android`, or EAS Build). Camera recording and liveness need a real device.
+1. **Point the app at the API.** Replace the store's local actions with calls to `server/` (the endpoints map 1:1; see `docs/BACKEND_CONTRACT.md`), and open the Paystack checkout URL for payments.
+2. **Run Paystack in test mode** and register the webhook URL. The adapter is written, but it hasn't been run against a real Paystack test account yet.
+3. **Plug in providers.** A NIMC-licensed KYC partner (`IdentityProvider`), an SMS OTP gateway, a private media bucket, and Expo push.
+4. **Build for devices** (`npx expo run:android` or EAS Build). Camera recording and liveness need a real device.

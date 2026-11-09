@@ -64,6 +64,7 @@ const weekHours = (start = 8, end = 18, sunday = false): Artisan['workingHours']
 
 const COLORS = ['#0EA5E9', '#0B3D91', '#0284C7', '#1E40AF', '#0369A1', '#2563EB', '#0F766E', '#7C3AED', '#B45309', '#BE185D'];
 
+let phoneSeq = 10;
 function artisan(
   id: string,
   name: string,
@@ -89,7 +90,7 @@ function artisan(
     accountType: opts.accountType ?? 'individual',
     businessName: opts.businessName,
     name,
-    phone: '+2348000000000',
+    phone: id === DEMO_ARTISAN_ID ? '+2348000000000' : `+23480${String(phoneSeq++).padStart(8, '0')}`,
     bio: opts.bio ?? `Experienced professional serving ${area} and nearby areas. Neat work, on time, and I explain everything before I start.`,
     area,
     city,

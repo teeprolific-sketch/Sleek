@@ -1,0 +1,29 @@
+{
+  "name": "sleek-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sleek API — escrow, verification, chat moderation and Ugent gateway. Re-uses ../src/domain rules.",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "TZ=Africa/Lagos tsx watch src/index.ts",
+    "start": "TZ=Africa/Lagos tsx src/index.ts",
+    "migrate": "tsx src/migrate.ts",
+    "seed": "tsx src/seed.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "TZ=Africa/Lagos tsx --test --test-concurrency=1 test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "fastify": "^5.12.8",
+    "pg": "^8.23.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3"
+  }
+}

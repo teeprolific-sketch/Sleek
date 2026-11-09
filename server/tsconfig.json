@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "rootDir": "..",
+    "outDir": "dist",
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "../src/domain/*.ts", "../src/data/categories.ts", "../src/data/seed.ts", "../src/data/disputes.ts", "../src/ugent/tools.ts", "../src/ugent/types.ts"]
+}

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- Sleek mark: two people reaching into a handshake, together forming a shield. -->
+  <defs>
+    <mask id="cut">
+      <rect width="120" height="120" fill="#fff" />
+      <!-- the arms meet the shoulders: thin separations make the handshake read -->
+      <path d="M44.5 57.5 L37 38.5 M75.5 57.5 L83 38.5" stroke="#000" stroke-width="3.2" stroke-linecap="round" />
+    </mask>
+  </defs>
+  <g fill="#0EA5E9" stroke="#0EA5E9" stroke-width="5" stroke-linejoin="round" mask="url(#cut)">
+    <circle cx="30" cy="14" r="12" stroke="none" />
+    <circle cx="90" cy="14" r="12" stroke="none" />
+    <path d="M29 35 Q60 47 91 35 L113 54 L113 85 L86 110 L64.5 95 L93 72 L76 57 L44 57 L27 72 L55.5 95 L34 110 L7 85 L7 54 Z" />
+  </g>
+</svg>

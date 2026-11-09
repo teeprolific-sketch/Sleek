@@ -59,6 +59,11 @@ describe('chat moderation — blocks', () => {
     expect(r.warning).toMatch(/not sent/);
     expect(r.redacted).not.toMatch(/\d/);
   });
+
+  it('redacts spelled-out numbers in the admin excerpt', () => {
+    const r = moderateMessage('call me on zero eight zero three one two three four five six seven');
+    expect(r.redacted).not.toMatch(/zero|eight|three|seven/);
+  });
 });
 
 describe('chat moderation — allows normal job talk', () => {

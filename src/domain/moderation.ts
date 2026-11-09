@@ -204,9 +204,16 @@ export function moderateMessage(text: string): ModerationResult {
   };
 }
 
+const STRONG_DIGIT_WORD_RE = new RegExp(
+  `\\b(${Object.keys(DIGIT_WORDS).filter((w) => !WEAK_DIGIT_WORDS.has(w)).join('|')})\\b`,
+  'gi',
+);
+
 export function redact(text: string): string {
   return text
     .replace(/\d/g, '•')
+    .replace(STRONG_DIGIT_WORD_RE, '•')
+    .replace(/\b(oh|o)\b(?=\s*•)/gi, '•')
     .replace(EMAIL_RE, '[email removed]')
     .replace(LINK_RE, '[link removed]')
     .slice(0, 160);

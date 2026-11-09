@@ -1,31 +1,64 @@
 {
   "expo": {
-    "name": "sleek",
+    "name": "Sleek",
     "slug": "sleek",
+    "scheme": "sleek",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#FFFFFF",
+    "description": "Sleek by Me AI — verified artisans, escrow-protected payments.",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "ai.me.sleek",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Sleek uses the camera for identity liveness checks, skill videos and job photos. Photos are taken live and never picked from your gallery.",
+        "NSMicrophoneUsageDescription": "Sleek records audio with your skill verification video so reviewers can follow your work."
+      }
     },
     "android": {
+      "package": "ai.me.sleek",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "permissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO"],
+      "blockedPermissions": ["android.permission.READ_CONTACTS", "android.permission.CALL_PHONE", "android.permission.READ_MEDIA_IMAGES", "android.permission.READ_EXTERNAL_STORAGE"],
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
     },
     "plugins": [
       "expo-router",
       "expo-secure-store",
       "expo-font",
-      "expo-splash-screen"
-    ]
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 120,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFFFF",
+          "dark": { "backgroundColor": "#050B18" }
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Sleek uses the camera for identity liveness checks, skill videos and job photos.",
+          "microphonePermission": "Sleek records audio with your skill verification video.",
+          "recordAudioAndroid": true
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
   }
 }

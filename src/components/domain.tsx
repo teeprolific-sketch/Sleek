@@ -7,6 +7,7 @@ import { STATUS_LABEL, STATUS_TONE } from '../domain/escrow';
 import { badgesFor, displayRating, type Badge } from '../domain/trust';
 import type { Artisan, Job } from '../domain/types';
 import { useT, type TKey } from '../i18n';
+import { openDialog } from './dialog';
 import { space, useTheme } from '../theme';
 import { AutoReleaseCountdown, EscrowBadge } from './feedback';
 import { FavouriteButton } from './jobParts';
@@ -15,13 +16,13 @@ import { Avatar, Card, Icon, Pill, Row, Stars, Txt } from './ui';
 
 /** Cross-platform alert/confirm (Alert is a no-op on web). */
 export function showMessage(title: string, message?: string) {
-  if (Platform.OS === 'web') globalThis.alert?.(message ? `${title}\n\n${message}` : title);
+  if (Platform.OS === 'web') openDialog({ title, message });
   else Alert.alert(title, message);
 }
 
 export function confirmAction(title: string, message: string, confirmLabel: string, onConfirm: () => void, destructive = false) {
   if (Platform.OS === 'web') {
-    if (globalThis.confirm?.(`${title}\n\n${message}`)) onConfirm();
+    openDialog({ title, message, confirmLabel, destructive, onConfirm });
     return;
   }
   Alert.alert(title, message, [

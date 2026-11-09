@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, AppState, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { DialogHost } from '../components/dialog';
 import { ErrorScreen, useNetworkWatcher } from '../components/feedback';
 import { translate, type Lang } from '../i18n';
 import { useStore } from '../store';
@@ -41,6 +42,7 @@ function Shell() {
         <Stack.Screen name="verify/liveness" options={{ presentation: 'fullScreenModal' }} />
         <Stack.Screen name="verify/skill" options={{ presentation: 'fullScreenModal' }} />
       </Stack>
+      <DialogHost />
     </>
   );
 }

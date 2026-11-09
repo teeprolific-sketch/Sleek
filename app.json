@@ -8,7 +8,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#FFFFFF",
-    "description": "Sleek by Me AI — verified artisans, escrow-protected payments.",
+    "description": "Sleek by Me AI \u2014 verified artisans, escrow-protected payments.",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "ai.me.sleek",
@@ -25,8 +25,16 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "permissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO"],
-      "blockedPermissions": ["android.permission.READ_CONTACTS", "android.permission.CALL_PHONE", "android.permission.READ_MEDIA_IMAGES", "android.permission.READ_EXTERNAL_STORAGE"],
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_CONTACTS",
+        "android.permission.CALL_PHONE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -35,7 +43,14 @@
       "output": "single"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "asyncRoutes": {
+            "web": false
+          }
+        }
+      ],
       "expo-secure-store",
       "expo-font",
       [
@@ -45,7 +60,9 @@
           "imageWidth": 120,
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF",
-          "dark": { "backgroundColor": "#050B18" }
+          "dark": {
+            "backgroundColor": "#050B18"
+          }
         }
       ],
       [

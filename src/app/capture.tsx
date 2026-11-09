@@ -7,6 +7,7 @@ import { Button, Icon, Row, Txt } from '../components/ui';
 import type { UploadPurpose } from '../domain/types';
 import { PURPOSE_PROMPT, resolveCapture } from '../utils/captureBus';
 import { space } from '../theme';
+import { DEMO_CAPTURE, demoPhoto } from '../utils/demo';
 
 /** Live camera capture for a single, named purpose. No gallery access. */
 export default function Capture() {
@@ -62,12 +63,12 @@ export default function Capture() {
               Sleek needs camera access for this photo. Photos can only be taken live — uploads from your gallery are not allowed.
             </Txt>
             <Button title="Allow camera" style={{ marginTop: space.lg }} onPress={requestPerm} />
-            {__DEV__ ? (
+            {DEMO_CAPTURE ? (
               <Button
-                title="Use demo photo (dev build only)"
+                title="Use a demo photo (preview only)"
                 variant="ghost"
                 style={{ marginTop: space.sm }}
-                onPress={() => setShot(`https://picsum.photos/seed/${purpose}${Date.now() % 1000}/600/800`)}
+                onPress={() => setShot(demoPhoto(purpose ?? 'photo'))}
               />
             ) : null}
           </View>

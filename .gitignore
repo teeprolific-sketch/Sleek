@@ -15,3 +15,4 @@ coverage/
 ios/
 android/
 .DS_Store
+dist-demo/

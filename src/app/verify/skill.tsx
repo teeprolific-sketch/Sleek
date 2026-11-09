@@ -9,6 +9,7 @@ import { category } from '../../data/categories';
 import { MAX_SKILL_VIDEO_SEC, MIN_SKILL_VIDEO_SEC } from '../../domain/verification';
 import { useMyArtisan, useStore } from '../../store';
 import { space } from '../../theme';
+import { DEMO_CAPTURE } from '../../utils/demo';
 
 /** In-app proof-of-work video for ONE skill. No uploads from the gallery. */
 export default function SkillVideo() {
@@ -138,8 +139,8 @@ export default function SkillVideo() {
           >
             <View style={{ width: recording ? 28 : 54, height: recording ? 28 : 54, borderRadius: recording ? 6 : 27, backgroundColor: '#EF4444' }} />
           </Pressable>
-        ) : __DEV__ ? (
-          <Button title="Submit simulated 45s video (dev build only)" variant="ghost" loading={busy} onPress={() => send(`dev-video-${Date.now()}.mp4`, 45)} />
+        ) : DEMO_CAPTURE ? (
+          <Button title="Submit a simulated 45s video (preview only)" variant="ghost" loading={busy} onPress={() => send(`dev-video-${Date.now()}.mp4`, 45)} />
         ) : null}
         <Txt v="small" color="#9DB0CC" center>
           Start and end with your face clearly visible. {MIN_SKILL_VIDEO_SEC}s–{MAX_SKILL_VIDEO_SEC / 60} min.

@@ -8,6 +8,7 @@ import { Button, Icon, Row, Txt } from '../../components/ui';
 import { pickChallenges } from '../../domain/verification';
 import { useStore } from '../../store';
 import { brand, space } from '../../theme';
+import { DEMO_CAPTURE } from '../../utils/demo';
 
 /**
  * Active liveness: random challenge sequence each attempt, frames captured per
@@ -30,7 +31,7 @@ export default function Liveness() {
     if (cam.current && ready) {
       const pic = await cam.current.takePictureAsync({ quality: 0.4, skipProcessing: true, shutterSound: false });
       uri = pic?.uri;
-    } else if (__DEV__) {
+    } else if (DEMO_CAPTURE) {
       uri = `dev-frame-${Date.now()}`;
     }
     if (!uri) return;
@@ -86,16 +87,16 @@ export default function Liveness() {
       </View>
       <View style={{ padding: space.lg, gap: space.sm }}>
         {!camAvailable ? <Button title="Allow camera" onPress={requestPerm} /> : null}
-        {camAvailable || __DEV__ ? (
+        {camAvailable || DEMO_CAPTURE ? (
           index < 0 ? (
             <Button title="Start" icon="scan-outline" onPress={() => setIndex(0)} disabled={busy} />
           ) : (
             <Button title="Done" icon="checkmark" onPress={capture} loading={busy} />
           )
         ) : null}
-        {!camAvailable && __DEV__ ? (
+        {!camAvailable && DEMO_CAPTURE ? (
           <Txt v="small" color="#9DB0CC" center>
-            Dev build: continuing without a camera uses simulated frames.
+            Preview mode: continuing without a camera uses simulated frames.
           </Txt>
         ) : null}
         <Button variant="ghost" title="Cancel" onPress={() => router.back()} />

@@ -12,7 +12,7 @@ const iso = (deps: Deps) => new Date(deps.now()).toISOString();
 
 // ---- media ------------------------------------------------------------------
 /** Purposes that can be captured. There is no generic/free upload. */
-export const MEDIA_PURPOSES = ['issue_photo', 'site_before', 'proof_of_work', 'dispute_evidence', 'delivery_confirmation', 'liveness_frame', 'skill_video'] as const;
+export const MEDIA_PURPOSES = ['issue_photo', 'site_before', 'proof_of_work', 'dispute_evidence', 'delivery_confirmation', 'liveness_frame', 'skill_video', 'certificate'] as const;
 export type MediaPurpose = (typeof MEDIA_PURPOSES)[number];
 const VIDEO_PURPOSES: MediaPurpose[] = ['skill_video'];
 

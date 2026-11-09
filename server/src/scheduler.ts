@@ -1,6 +1,7 @@
 import type { Deps } from './context';
 import { autoSuspendRepeatOffenders } from './services/admin';
 import { expireRequests } from './services/agent';
+import { runScheduledPayouts } from './services/features';
 import { expireUnpaid, runAutoRelease } from './services/jobs';
 
 const LOCK_KEY = 7_331_001; // pg advisory lock: only one instance runs the sweep at a time
@@ -16,7 +17,8 @@ export async function sweep(deps: Deps) {
       const expired = await expireUnpaid(deps);
       await expireRequests(deps);
       const suspended = await autoSuspendRepeatOffenders(deps);
-      return { released, expired, suspended };
+      const payouts = await runScheduledPayouts(deps);
+      return { released, expired, suspended, payouts };
     } finally {
       await c.query('SELECT pg_advisory_unlock($1)', [LOCK_KEY]);
     }

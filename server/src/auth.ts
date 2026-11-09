@@ -6,7 +6,9 @@ import type { Deps } from './context';
 import { badRequest, forbidden, tooMany, unauthorized } from './errors';
 import { newId, sha256 } from './ids';
 import { sign, verify, type Claims } from './jwt';
+import { isValidReferralCode } from '../../src/domain/referrals';
 import { findUserByPhone, insertUser, notify } from './repo';
+import { applyReferral } from './services/features';
 
 export interface Session {
   userId: string;
@@ -73,6 +75,7 @@ export interface RegisterInput {
   businessName?: string;
   city: string;
   area: string;
+  referralCode?: string;
 }
 
 export async function register(deps: Deps, i: RegisterInput) {
@@ -80,6 +83,7 @@ export async function register(deps: Deps, i: RegisterInput) {
   if (!claims || claims.scope !== 'register' || !claims.phone) throw unauthorized('Verify your phone number again.');
   if (await findUserByPhone(deps, claims.phone)) throw badRequest('An account already exists for this number. Sign in instead.');
   if (i.name.trim().split(/\s+/).length < 2) throw badRequest('Enter your first and last name as on your NIN.');
+  if (i.referralCode && !isValidReferralCode(i.referralCode)) throw badRequest('That referral code isn’t valid. Check it, or leave it empty.');
   const id = newId(i.role === 'customer' ? 'cus' : 'art');
   const now = new Date(deps.now()).toISOString();
   if (i.role === 'customer') {
@@ -110,6 +114,10 @@ export async function register(deps: Deps, i: RegisterInput) {
     };
     await insertUser(deps, a);
     await notify(deps, id, 'Welcome to Sleek', 'Verify your identity and each skill to start receiving jobs.', '/verify');
+  }
+  if (i.referralCode) {
+    const [first, last] = i.name.trim().split(/\s+/);
+    await applyReferral(deps, id, `${first} ${last?.[0] ?? ''}.`, i.role, i.referralCode).catch(() => undefined); // a bad code never blocks sign-up
   }
   return { token: sign({ sub: id, role: i.role, scope: 'user' }, deps.cfg.jwtSecret, SESSION_TTL, deps.now()), role: i.role, userId: id };
 }

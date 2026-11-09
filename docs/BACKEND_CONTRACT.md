@@ -37,3 +37,28 @@ The mobile store (`src/store/index.ts`) is a faithful local implementation of th
 - Expire unpaid `price_agreed` jobs after 24h, which frees the slot.
 - Expire Ugent confirmation requests after 30 minutes.
 - Auto-suspend accounts with 5 or more rule violations within 30 days, pending admin review.
+
+## v2 endpoints
+
+| Method & path | Store action | Server-side rule |
+| --- | --- | --- |
+| `GET /v1/jobs?filter=completed\|cancelled\|disputed\|active` | History screen | Own jobs only |
+| `POST /v1/jobs/:id/en-route` | `markEnRoute` | `canMarkEnRoute` |
+| `POST /v1/jobs/:id/extensions` / `.../extensions/decision` | `requestExtension` / `decideExtension` | `validateExtension`, `extensionClashes` under the artisan lock |
+| `POST /v1/jobs/:id/tip` → webhook | `addTip` | `validateTip`, credited only from a verified PSP charge, one per job (ledger unique index) |
+| `POST /v1/jobs/:id/customer-review` | `rateCustomer` | `validateCustomerReview`, once per job |
+| `POST /v1/jobs/:id/protection-claims`, `POST /v1/admin/protection-claims/:id` | `submitGuaranteeClaim` / `decideGuaranteeClaim` | `protectionEligible`, 7-day window, payout capped by `protectionCover` |
+| `POST /v1/disputes/:id/evidence` | `addDisputeEvidence` | Own, unused `dispute_evidence` media only |
+| `POST /v1/safety/alerts`, `GET/POST /v1/admin/safety` | `raiseSafetyAlert` / `updateSafetyAlert` | Admins are notified on the `safety` category, which can't be muted |
+| `PUT/DELETE /v1/me/favourites/:id`, `GET /v1/me/favourites` | `toggleFavourite` | — |
+| `PUT /v1/me/preferences`, `GET /v1/me/search` | `setMatchingPrefs`, search | `applyPreferences` on top of `searchAvailable` |
+| `PUT /v1/me/trusted-contact` | `setTrustedContact` | Nigerian mobile only, never shown to artisans |
+| `GET/PUT /v1/me/notification-preferences` | `setNotificationPref` / `setQuietHours` | `shouldPush` decides `silent` on every notification |
+| `GET /v1/me/referrals`, `referralCode` on register | `register`, referrals screen | Reward when `referralQualifies` (inside the release transaction) |
+| `POST/DELETE /v1/artisan/time-off` | `addTimeOff` | Can't cover a funded job, and `bookableFor` respects it |
+| `PUT /v1/artisan/payout-schedule` | `setPayoutSchedule` | Scheduler runs `autoPayoutDue` |
+| `PUT /v1/artisan/business` | `completeBusinessOnboarding` | Agencies need a CAC number |
+| `PATCH/DELETE /v1/team/workers/:id(/details)` | `updateWorker` / `removeWorker` | Can't remove a worker with active jobs |
+| `POST /v1/verification/skills/:id/certificate` | `submitCertificate` | Own, unused `certificate` media |
+| `GET /v1/artisan/insights` | Insights screen | `artisanInsights` |
+| `GET /v1/admin/notes/:type/:id`, `POST /v1/admin/notes` | `addAdminNote` | Admin-only, never returned to users |

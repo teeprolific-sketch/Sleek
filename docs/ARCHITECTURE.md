@@ -14,6 +14,12 @@
 | `availability.ts` | Overlap with a 30-minute travel buffer, working hours, per-worker capacity for teams and agencies, "available now" vs. bookable for a window. Future bookings only block their own window. |
 | `ranking.ts` | Score = verification (30) + experience (20) + Bayesian rating (25) + reliability (15) + proof-of-work quality (10) − penalties. Search returns available artisans only. |
 | `trust.ts` | Trust score 0–100, badges (Identity Verified, per-skill Verified, Trusted, Team/Agency). |
+| `timeline.ts` | The single job timeline both sides see, including the halted states (cancelled, disputed). |
+| `extensions.ts` | "More time" requests: limits, and clash checks against the worker's next booking. |
+| `tips.ts`, `customerRating.ts` | Tip rules (after release, once, ₦200–₦50k, 100% to the artisan) and the artisan → customer rating. |
+| `geo.ts`, `matching.ts` | Area-level distance (never exact location) and matching preferences applied on top of ranking. |
+| `payouts.ts`, `referrals.ts`, `protection.ts` | Payout schedules, referral codes and qualification, and Sleek Protection eligibility and cover. |
+| `insights.ts`, `notifications.ts` | Performance insights; notification categories, quiet hours, and alerts that can never be muted. |
 | `verification.ts` | NIN format, ordered identity steps, randomised liveness challenges, automated skill-video gate (in-app, 30–180s, liveness, face match ≥ 0.80). High-risk trades go to human review plus a certificate check. |
 
 ## Job lifecycle
@@ -39,6 +45,12 @@ There is no gallery or file picker anywhere. `utils/captureBus.ts` opens `/captu
 - Payouts only go to accounts whose name matches the verified identity.
 - The session token belongs in `expo-secure-store` in production (wired as a plugin).
 - NDPA 2023: data export and account deletion entry points live in Settings.
+
+## Languages
+`src/i18n` holds English (source) and Nigerian Pidgin. A missing key falls back to English, so a partly translated screen never breaks. Tabs, home, job status, timeline, escrow, chat warnings, Dispute Centre, safety, empty states, network and error states are translated. Yoruba, Hausa, Igbo and French are listed as "coming soon".
+
+## Offline & poor network
+`useNetworkWatcher` (NetInfo) feeds `store.network`. A banner explains what still works. Chat messages written offline go to an outbox and send automatically when the connection returns. Money and state-changing actions refuse with a clear message instead of failing silently. Settings → Demo → "Simulate no network" lets you try it.
 
 ## Theming
 `src/theme` defines light and dark palettes from the brand colours (#0EA5E9 sky, #0B3D91 deep, #FFFFFF). Every component reads `useTheme()`. The mode can be System, Light or Dark and is persisted.

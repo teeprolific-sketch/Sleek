@@ -35,6 +35,10 @@ Customer · Individual artisan · Team · Agency · Sleek admin. Any 6 digits wo
 | Shared | Notifications, Trust & Safety centre, Help & Support (FAQ + tickets), settings (System / Light / Dark theme, data saver, privacy) |
 | Admin | Overview (escrow held, commission, repeat offenders), skill-video review queue (high-risk trades need a certificate check), dispute resolution (full chat, evidence, release / refund / split), rule-breaking monitor |
 | Ugent | Connect screen showing exactly what the agent can and can't do, a chat console, and **confirmation cards for every booking, price change, payment and cancellation** |
+| Trust & convenience (v2) | Shared **job timeline** (Booked → En route → Started → Proof → Approved → Paid), **Escrow Protected** badge and live auto-release countdown on every job, **Dispute Centre**, **saved artisans** and one-tap **rebook**, **job history** with filters, **tips** after release, **Sleek Protection** 7-day guarantee claims, **two-way reviews** (artisans rate customers), **more-time requests** with customer approval, **emergency/safety sheet** (alert Sleek, call 112, share with a trusted contact) |
+| Matching (v2) | Saved **matching preferences** (gender where relevant, minimum rating, distance, price range, Trusted only, free today), search filters, and a **privacy-safe "Nearby" view** that shows area-level positions only |
+| Artisan tools (v2) | **Earnings dashboard** (available, pending, total earned, commission, tips, payouts), **payout settings & schedules**, **day/week calendar** with **time off**, **performance insights**, detailed **team member management** (roles, notes, removal), **re-submission** screens with certificate upload, separate **Team/Agency onboarding** |
+| System (v2) | **Notification settings** (per category, quiet hours; safety and money alerts can't be muted), **referrals** for customers and artisans, **English + Nigerian Pidgin** (Yoruba, Hausa, Igbo and French listed as coming soon), **offline/poor-network** handling (banner, queued chat, guarded actions), error and not-found screens, first-run tips, admin **safety queue** and **internal notes** |
 
 ## Project layout
 

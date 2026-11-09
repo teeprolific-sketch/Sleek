@@ -13,6 +13,7 @@ import * as Esc from '../../../src/domain/escrow';
 import { moderateMessage } from '../../../src/domain/moderation';
 import * as Pool from '../../../src/domain/pricePool';
 import { isTrusted } from '../../../src/domain/trust';
+import { creditTip, qualifyReferral } from './features';
 import type { Artisan, CapturedMedia, Customer, Dispute, DisputeOutcome, DisputeReason, Job, Review, TimeWindow, UploadPurpose } from '../../../src/domain/types';
 import type { Deps } from '../context';
 import { badRequest, conflict, forbidden, notFound, ruleViolation } from '../errors';
@@ -47,9 +48,12 @@ export async function getJobFor(deps: Deps, s: Session, id: string) {
   return jobView(job, s);
 }
 
-export async function listJobs(deps: Deps, s: Session) {
+export const HISTORY_FILTERS = { completed: ['completed'], cancelled: ['cancelled', 'declined'], disputed: ['disputed', 'resolved'], active: ['requested', 'price_agreed', 'funded', 'in_progress', 'proof_submitted', 'disputed'] } as const;
+
+export async function listJobs(deps: Deps, s: Session, filter?: keyof typeof HISTORY_FILTERS) {
   const col = s.role === 'artisan' ? 'artisan_id' : 'customer_id';
-  const rows = await deps.db.query<{ data: Job }>(`SELECT data FROM jobs WHERE ${col} = $1 ORDER BY updated_at DESC LIMIT 200`, [s.userId]);
+  const statuses = filter ? [...HISTORY_FILTERS[filter]] : null;
+  const rows = await deps.db.query<{ data: Job }>(`SELECT data FROM jobs WHERE ${col} = $1 ${statuses ? 'AND status = ANY($2)' : ''} ORDER BY updated_at DESC LIMIT 200`, statuses ? [s.userId, statuses] : [s.userId]);
   return rows.map((r) => jobView(r.data, s));
 }
 
@@ -279,6 +283,10 @@ export async function handleChargeSuccess(deps: Deps, reference: string, paidAmo
       effects.push(() => issueRefund(deps, reference, paidAmount, pay.target_id, 'Amount did not match the locked price'));
       return 'amount_mismatch';
     }
+    if (pay.kind === 'tip') {
+      await deps.db.query("UPDATE payments SET status = 'success', updated_at = now() WHERE reference = $1", [reference], c);
+      return creditTip(deps, c, reference, pay.target_id, paidAmount);
+    }
     if (pay.kind === 'order') {
       await deps.db.query("UPDATE payments SET status = 'success', updated_at = now() WHERE reference = $1", [reference], c);
       const row = await deps.db.one<{ data: { timeline: { at: string; label: string }[] } }>('SELECT data FROM orders WHERE id = $1 FOR UPDATE', [pay.target_id], c);
@@ -361,6 +369,7 @@ export async function startJob(deps: Deps, s: Session, jobId: string) {
     if (partyOf(job, s) !== 'artisan') throw forbidden('Only the artisan can start the job.');
     if (!Esc.canStart(job, deps.now())) throw ruleViolation('You can start from 1 hour before the agreed time, once escrow is funded.', 'cannot_start');
     job.status = 'in_progress';
+    job.startedAt = iso(deps);
     addTimeline(deps, job, 'Artisan started work', 'artisan');
     await saveJob(deps, job, c);
     await systemMessage(deps, jobId, 'The artisan has started work.', c);
@@ -424,6 +433,9 @@ async function releaseInTx(deps: Deps, c: PoolClient, job: Job, reason: 'custome
   await deps.db.query("INSERT INTO ledger (id, artisan_id, job_id, type, amount, note) VALUES ($1, $2, $3, 'escrow_release', $4, $5)", [newId('led'), artisan.id, job.id, job.escrow.releasedToArtisan, job.title], c);
   artisan.stats = { ...artisan.stats, completedJobs: artisan.stats.completedJobs + 1 };
   await saveUser(deps, artisan, c);
+  await qualifyReferral(deps, c, artisan.id, 'artisan', artisan.stats.completedJobs);
+  const [{ n }] = await deps.db.query<{ n: string }>("SELECT count(*) AS n FROM jobs WHERE customer_id = $1 AND status = 'completed'", [job.customerId], c);
+  await qualifyReferral(deps, c, job.customerId, 'customer', Number(n));
   await systemMessage(deps, job.id, `Payment released: ${naira(job.escrow.releasedToArtisan!)} to the artisan (Sleek commission ${naira(job.escrow.commission!)}).`, c);
   await notify(deps, artisan.id, 'Payment released', `${naira(job.escrow.releasedToArtisan!)} for “${job.title}” is now in your earnings.`, '/earnings', c);
   await notify(deps, job.customerId, reason === 'auto_release' ? 'Payment auto-released' : 'Job completed', `“${job.title}” is complete. Please rate your artisan.`, `/review/${job.id}`, c);

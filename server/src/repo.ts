@@ -1,5 +1,6 @@
 import type { PoolClient } from 'pg';
-import type { Admin, AppNotification, Artisan, ChatMessage, Customer, Job, User } from '../../src/domain/types';
+import { categoryFromLink, shouldPush } from '../../src/domain/notifications';
+import type { Admin, AppNotification, Artisan, ChatMessage, Customer, Job, NotificationCategory, NotificationPrefs, User } from '../../src/domain/types';
 import type { Deps } from './context';
 import type { Queryable } from './db';
 import { notFound } from './errors';
@@ -91,10 +92,14 @@ export async function insertMessage(deps: Deps, m: Omit<ChatMessage, 'id' | 'at'
 
 export const systemMessage = (deps: Deps, jobId: string, text: string, c?: C) => insertMessage(deps, { jobId, from: 'system', kind: 'system', text }, c);
 
-export async function notify(deps: Deps, userId: string, title: string, body: string, link?: string, c: C = deps.db.pool) {
-  const n: AppNotification = { id: newId('n'), userId, title, body, link, at: iso(deps), read: false };
+export async function notify(deps: Deps, userId: string, title: string, body: string, link?: string, c: C = deps.db.pool, category?: NotificationCategory) {
+  const cat = category ?? categoryFromLink(link, title);
+  const prefs = await deps.db.one<{ notification_prefs: NotificationPrefs }>('SELECT notification_prefs FROM users WHERE id = $1', [userId], c);
+  const p = prefs?.notification_prefs && Object.keys(prefs.notification_prefs).length ? prefs.notification_prefs : undefined;
+  const silent = !shouldPush(p, cat, deps.now());
+  const n: AppNotification = { id: newId('n'), userId, title, body, link, at: iso(deps), read: false, category: cat, silent };
   await deps.db.query('INSERT INTO notifications (id, user_id, data) VALUES ($1, $2, $3)', [n.id, userId, JSON.stringify(n)], c);
-  // Production: also enqueue an Expo push notification for the user's devices here.
+  // Production: when !silent, enqueue an Expo push notification for the user's devices here.
 }
 
 export async function audit(deps: Deps, actorId: string | null, action: string, targetId: string | null, detail: Record<string, unknown> = {}, c: C = deps.db.pool) {

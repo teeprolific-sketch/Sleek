@@ -9,6 +9,7 @@ import { MockGateway } from './providers/payments';
 import * as admin from './services/admin';
 import * as agent from './services/agent';
 import * as artisans from './services/artisans';
+import * as feat from './services/features';
 import * as jobs from './services/jobs';
 import * as misc from './services/misc';
 
@@ -94,6 +95,7 @@ export function buildApp(deps: Deps): FastifyInstance {
         businessName: z.string().max(80).optional(),
         city: z.string().min(2).max(40),
         area: z.string().min(2).max(60),
+        referralCode: z.string().max(12).optional(),
       }),
       req.body,
     );
@@ -161,6 +163,23 @@ export function buildApp(deps: Deps): FastifyInstance {
     return { ok: true };
   });
   app.get('/v1/earnings', A, async (req) => artisans.earnings(deps, sess(req)));
+  app.get('/v1/artisan/insights', A, async (req) => feat.insights(deps, sess(req)));
+  app.post('/v1/artisan/time-off', A, async (req) => feat.addTimeOff(deps, sess(req), P(z.object({ start: isoDate, end: isoDate, reason: z.string().min(2).max(60) }), req.body)));
+  app.delete('/v1/artisan/time-off/:id', A, async (req) => feat.removeTimeOff(deps, sess(req), params(req).id));
+  app.put('/v1/artisan/payout-schedule', A, async (req) => feat.setPayoutSchedule(deps, sess(req), P(z.object({ mode: z.enum(['manual', 'daily', 'weekly']), weekday: z.number().int().min(0).max(6).optional(), minimum: z.number().int().min(1000) }), req.body)));
+  app.put('/v1/artisan/business', A, async (req) => feat.completeBusiness(deps, sess(req), { ...P(z.object({ cacNumber: z.string().max(20).optional(), serviceAreas: z.array(z.string().max(60)).max(30), teamSize: z.number().int().min(1).max(5000) }), req.body), completedOnboarding: true }));
+  app.patch('/v1/team/workers/:id/details', A, async (req) => {
+    await feat.updateWorker(deps, sess(req), params(req).id, P(z.object({ role: z.enum(['member', 'supervisor']).optional(), ownerNote: z.string().max(500).optional() }), req.body));
+    return { ok: true };
+  });
+  app.delete('/v1/team/workers/:id', A, async (req) => {
+    await feat.removeWorker(deps, sess(req), params(req).id);
+    return { ok: true };
+  });
+  app.post('/v1/verification/skills/:id/certificate', A, async (req) => {
+    const b = P(z.object({ mediaId: id, workerId: id.optional() }), req.body);
+    return feat.submitCertificate(deps, sess(req), params(req).id, b.mediaId, b.workerId);
+  });
   app.put('/v1/payout-account', A, async (req) => {
     const b = P(z.object({ accountNumber: z.string(), bankCode: z.string().min(3).max(10), bankName: z.string().min(2).max(60) }), req.body);
     return artisans.setPayoutAccount(deps, sess(req), b.accountNumber, b.bankCode, b.bankName);
@@ -169,7 +188,48 @@ export function buildApp(deps: Deps): FastifyInstance {
 
   // ---- jobs -----------------------------------------------------------------------
   const U = { preHandler: auth() };
-  app.get('/v1/jobs', U, async (req) => jobs.listJobs(deps, sess(req)));
+  app.get('/v1/jobs', U, async (req) => jobs.listJobs(deps, sess(req), P(z.object({ filter: z.enum(['completed', 'cancelled', 'disputed', 'active']).optional() }), req.query).filter));
+  app.post('/v1/jobs/:id/en-route', { preHandler: auth(['artisan']) }, async (req) => feat.markEnRoute(deps, sess(req), params(req).id));
+  app.post('/v1/jobs/:id/extensions', { preHandler: auth(['artisan']) }, async (req) => {
+    const b = P(z.object({ extraMinutes: z.number().int(), reason: z.string().max(300) }), req.body);
+    return feat.requestExtension(deps, sess(req), params(req).id, b.extraMinutes, b.reason);
+  });
+  app.post('/v1/jobs/:id/extensions/decision', { preHandler: auth(['customer']) }, async (req) => feat.decideExtension(deps, sess(req), params(req).id, P(z.object({ approve: z.boolean() }), req.body).approve));
+  app.post('/v1/jobs/:id/tip', { preHandler: auth(['customer']) }, async (req) => feat.initTip(deps, sess(req), params(req).id, P(z.object({ amount: z.number().int() }), req.body).amount));
+  app.post('/v1/jobs/:id/customer-review', { preHandler: auth(['artisan']) }, async (req) => {
+    const b = P(z.object({ professionalism: z.number().int(), clarity: z.number().int(), payment: z.number().int(), comment: z.string().max(1000).default('') }), req.body);
+    return feat.rateCustomer(deps, sess(req), params(req).id, b);
+  });
+  app.post('/v1/jobs/:id/protection-claims', { preHandler: auth(['customer']) }, async (req) => feat.submitProtectionClaim(deps, sess(req), params(req).id, P(z.object({ details: z.string().max(2000) }), req.body).details));
+  app.post('/v1/disputes/:id/evidence', U, async (req) => feat.addDisputeEvidence(deps, sess(req), params(req).id, P(z.object({ mediaId: id }), req.body).mediaId));
+
+  // ---- safety -----------------------------------------------------------------------
+  app.post('/v1/safety/alerts', U, async (req, reply) => {
+    const b = P(z.object({ kind: z.enum(['sos', 'unsafe', 'emergency_call', 'shared_with_contact']), note: z.string().max(500).default(''), jobId: id.optional() }), req.body);
+    reply.status(201);
+    return feat.raiseSafetyAlert(deps, sess(req), b.kind, b.note, b.jobId);
+  });
+
+  // ---- customer profile extras -----------------------------------------------------------
+  const C = { preHandler: auth(['customer']) };
+  app.get('/v1/me/favourites', C, async (req) => feat.listFavourites(deps, sess(req)));
+  app.put('/v1/me/favourites/:id', C, async (req) => feat.setFavourite(deps, sess(req), params(req).id, true));
+  app.delete('/v1/me/favourites/:id', C, async (req) => feat.setFavourite(deps, sess(req), params(req).id, false));
+  app.put('/v1/me/preferences', C, async (req) => {
+    const b = P(z.object({ genderPreference: z.enum(['any', 'female', 'male']).optional(), minRating: z.number().min(0).max(5).optional(), trustedOnly: z.boolean().optional(), maxDistanceKm: z.number().min(1).max(200).nullable().optional(), availableToday: z.boolean().optional(), priceMin: z.number().int().min(0).optional(), priceMax: z.number().int().min(0).optional() }), req.body);
+    return feat.setPreferences(deps, sess(req), b);
+  });
+  app.put('/v1/me/trusted-contact', C, async (req) => feat.setTrustedContact(deps, sess(req), P(z.object({ contact: z.object({ name: z.string().min(2).max(60), phone: z.string() }).nullable() }), req.body).contact));
+  app.get('/v1/me/search', C, async (req) => {
+    const q = P(z.object({ category: z.string().optional(), city: z.string().optional(), text: z.string().max(60).optional(), start: isoDate.optional(), end: isoDate.optional(), limit: z.coerce.number().int().min(1).max(50).optional() }), req.query);
+    return feat.personalisedSearch(deps, sess(req), { categoryId: q.category, city: q.city, text: q.text, window: q.start && q.end ? { start: q.start, end: q.end } : undefined, limit: q.limit });
+  });
+  app.get('/v1/me/notification-preferences', U, async (req) => feat.getNotificationPrefs(deps, sess(req)));
+  app.put('/v1/me/notification-preferences', U, async (req) => {
+    const b = P(z.object({ enabled: z.record(z.boolean()).optional(), quietHours: z.object({ enabled: z.boolean(), start: z.number().int().min(0).max(23), end: z.number().int().min(0).max(23) }).optional() }), req.body);
+    return feat.setNotificationPrefs(deps, sess(req), b as never);
+  });
+  app.get('/v1/me/referrals', U, async (req) => feat.listReferrals(deps, sess(req)));
   app.post('/v1/jobs', { preHandler: auth(['customer']) }, async (req, reply) => {
     const b = P(z.object({ artisanId: id, categoryId: z.string(), title: z.string().max(80).default(''), description: z.string().min(10).max(1000), window: windowSchema, addressIndex: z.number().int().min(0).default(0), issueMediaIds: z.array(id).max(6).default([]), workerId: id.optional() }), req.body);
     reply.status(201);
@@ -272,6 +332,23 @@ export function buildApp(deps: Deps): FastifyInstance {
     return admin.reviewSkill(deps, sess(req), b);
   });
   app.get('/v1/admin/disputes', ADM, async (req) => admin.disputes(deps, sess(req)));
+  app.get('/v1/admin/safety', ADM, async (req) => feat.listSafety(deps, sess(req)));
+  app.post('/v1/admin/safety/:id', ADM, async (req) => {
+    await feat.updateSafety(deps, sess(req), params(req).id, P(z.object({ status: z.enum(['acknowledged', 'resolved']) }), req.body).status);
+    return { ok: true };
+  });
+  app.post('/v1/admin/protection-claims/:id', ADM, async (req) => {
+    const b = P(z.object({ approve: z.boolean(), payout: z.number().min(0).default(0) }), req.body);
+    return feat.decideProtectionClaim(deps, sess(req), params(req).id, b.approve, b.payout);
+  });
+  app.get('/v1/admin/notes/:type/:id', ADM, async (req) => {
+    const p = P(z.object({ type: z.enum(['user', 'job', 'dispute', 'safety']), id }), req.params);
+    return feat.listAdminNotes(deps, sess(req), p.type, p.id);
+  });
+  app.post('/v1/admin/notes', ADM, async (req) => {
+    const b = P(z.object({ targetType: z.enum(['user', 'job', 'dispute', 'safety']), targetId: id, text: z.string().max(2000) }), req.body);
+    return feat.addAdminNote(deps, sess(req), b.targetType, b.targetId, b.text);
+  });
   app.post('/v1/admin/disputes/:id/review', ADM, async (req) => {
     await admin.startDisputeReview(deps, sess(req), params(req).id);
     return { ok: true };

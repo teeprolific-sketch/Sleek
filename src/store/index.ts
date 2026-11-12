@@ -236,6 +236,8 @@ export interface Actions {
   setLanguage(l: Settings['language']): void;
   dismissTip(id: string): void;
   setNetwork(n: { online: boolean; weak: boolean }): void;
+  /** The sender's last few chat texts in a job (last 15 min), used to catch numbers split across messages. */
+  recentTextsBy(jobId: ID, from: 'customer' | 'artisan'): string[];
   flushOutbox(): void;
 
   // Admin extras
@@ -618,6 +620,12 @@ export const useStore = create<State>()(
           set({ network: n });
           if (wasOffline && n.online) get().flushOutbox();
         },
+        recentTextsBy: (jobId, from) => {
+          const since = Date.now() - 15 * 60_000;
+          const sent = get().messages.filter((m) => m.jobId === jobId && m.from === from && m.kind === 'text' && new Date(m.at).getTime() >= since);
+          const queued = get().outbox.filter((m) => m.jobId === jobId && m.from === from);
+          return [...sent, ...queued].map((m) => m.text).slice(-4);
+        },
         flushOutbox: () => {
           const queued = get().outbox;
           if (!queued.length || isOffline()) return;
@@ -693,7 +701,7 @@ export const useStore = create<State>()(
         sendMessage: (jobId, text) => {
           const j = job(jobId);
           const party = j && myParty(j);
-          const res = moderateMessage(text);
+          const res = moderateMessage(text, { recent: party ? get().recentTextsBy(jobId, party) : [] });
           if (!j || !party) return { ...res, allowed: false, warning: 'You are not part of this job.' };
           if (!text.trim()) return { ...res, allowed: false, warning: undefined };
           if (['completed', 'resolved', 'cancelled', 'declined'].includes(j.status)) return { ...res, allowed: false, warning: 'This job is closed. Chat is read-only.' };
@@ -913,6 +921,8 @@ export const useStore = create<State>()(
           if (!j || !party) return fail('Job not found.');
           if (!Esc.canDispute(j)) return fail('Disputes can be opened while money is held in escrow.');
           if (details.trim().length < 15) return fail('Please describe the problem in a few sentences (at least 15 characters).');
+          const dm = moderateMessage(details);
+          if (!dm.allowed) return fail(dm.warning!);
           const id = uid('dsp');
           const d: Dispute = { id, jobId, openedBy: party, reason, details: details.trim(), evidence, status: 'open', openedAt: nowIso() };
           set((s) => ({ disputes: [d, ...s.disputes] }));
@@ -1043,6 +1053,7 @@ export const useStore = create<State>()(
           const a = artisanById(id);
           if (!a || a.accountType === 'individual') return fail('Only Team and Agency accounts can add workers.');
           if (name.trim().length < 3) return fail('Enter the worker’s full name.');
+          if (!moderateMessage(name).allowed) return fail('A name can’t include phone numbers, emails or links.');
           const w: Worker = { id: uid('wk'), name: name.trim(), identity: emptyIdentity(), skills: [], active: true, avatarColor: '#0284C7' };
           patchArtisan(id, (x) => ({ workers: [...x.workers, w] }));
           return ok(w.id);

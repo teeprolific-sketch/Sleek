@@ -72,7 +72,7 @@ describe('trust rules on the server', () => {
   });
 
   it('refunds 90% when the customer cancels less than 24h before the job', async () => {
-    const w = weekdayAt(h.clock.t, 9, 4, 1);
+    const w = weekdayAt(h.clock.t, 16, 4, 1); // 4pm: never overlaps the 10am booking above, whatever weekday the suite runs on
     const id = await lockedJob(h, c2, musa, 'art_musa', 'plumber', w, 30000);
     await fund(h, id, c2);
     h.clock.t = new Date(w.start).getTime() - 5 * H;

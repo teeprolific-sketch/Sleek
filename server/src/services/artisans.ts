@@ -200,6 +200,7 @@ export async function submitSkillVideo(deps: Deps, s: Session, i: { categoryId: 
 
 export async function addWorker(deps: Deps, s: Session, name: string) {
   if (name.trim().length < 3) throw badRequest('Enter the worker’s full name.');
+  if (!moderateMessage(name).allowed) throw ruleViolation('A name can’t include phone numbers, emails or links.', 'message_blocked');
   let id = '';
   await mutate(deps, s, (a) => {
     if (a.accountType === 'individual') throw forbidden('Only Team and Agency accounts can add workers.');

@@ -73,8 +73,49 @@ const OFF_APP_PATTERNS: { re: RegExp; type: ViolationType }[] = [
   { re: /\b(no\s*need\s*(for|of)\s*(the\s*)?(app|escrow|sleek))\b/i, type: 'off_app_payment' },
 ];
 
+/**
+ * Normalise text before checking it: full-width and other Unicode digits →
+ * ASCII, full-width @ and . → ASCII (NFKC), invisible characters removed, and
+ * number words glued together ("zero8zero3one2") split apart.
+ */
+const INVISIBLE_RE = /[\u200B-\u200F\u2060-\u2064\uFEFF\uFE0E\uFE0F\u20E3\u00AD]/g;
+const NUMBER_WORD_LIST = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+const GLUED_RE = new RegExp(`(${NUMBER_WORD_LIST.join('|')}|\\d)`, 'gi');
+
+function toAsciiDigits(text: string): string {
+  return text.replace(/\p{Nd}/gu, (ch) => {
+    let cp = ch.codePointAt(0)!;
+    if (cp < 128) return ch;
+    // Decimal digit blocks are runs of ten (0–9): walk back to the block's zero.
+    let start = cp;
+    while (start > 0 && /\p{Nd}/u.test(String.fromCodePoint(start - 1)) && cp - start < 9) start--;
+    return String((cp - start) % 10);
+  });
+}
+
+function unglue(text: string): string {
+  return text
+    .split(/(\s+)/)
+    .map((tok) => {
+      if (!/[a-z]/i.test(tok)) return tok; // plain digits are handled by the digit-run checks
+      const parts = tok.match(GLUED_RE) ?? [];
+      const leftover = tok.replace(GLUED_RE, '').replace(/[^a-z]/gi, '');
+      // e.g. "zero8zero3one2three" → 7 parts, nothing left over
+      return parts.length >= 3 && leftover.length <= 2 ? parts.join(' ') : tok;
+    })
+    .join('');
+}
+
+export function normaliseForChecks(text: string): string {
+  return unglue(toAsciiDigits(text.normalize('NFKC').replace(INVISIBLE_RE, '')));
+}
+
 const EMAIL_RE = /[a-z0-9._%+-]+\s*(@|\(at\)|\[at\]|\{at\}|\sat\s)\s*[a-z0-9-]+\s*(\.|\(dot\)|\[dot\]|\sdot\s)\s*[a-z]{2,}/i;
-const EMAIL_PROVIDER_RE = /\b(gmail|yahoo|hotmail|outlook|icloud|ymail|proton\s*mail|protonmail)\b/i;
+const EMAIL_PROVIDER_RE = /(gmail|yahoo|hotmail|ymail|icloud|proton\s*mail|aol\.com|live\.com|outlook\s*(\.|dot)\s*com)/i;
+/** Any @ between two word characters is an address, however it's dotted ("a.m.a.k.a@g.m.a.i.l.com", "amaka@gmail"). */
+const AT_ADDRESS_RE = /[a-z0-9]\s*@\s*[a-z0-9]/i;
+/** Talking about email at all ("email me", "my e-mail", "mail: amaka.j") moves the conversation off Sleek. */
+const EMAIL_WORD_RE = /\b(e-?\s?mail|electronic mail)\b|\bmail\s*(?::|\b(?:me|address|id)\b)|\b(my|your|ur|send)\s+mail\b/i;
 const SPOKEN_LINK_RE = /\bdot\s*(com|ng|net|org|io)\b/i;
 const LINK_RE = /\b((https?:\/\/)|(www\.))\S+|\b[a-z0-9-]{2,}\.(com|ng|net|org|io|co|me|app|link|ly|xyz|biz|info)(\.ng)?\b/i;
 
@@ -162,34 +203,57 @@ function hasPhoneLikeRun(text: string): boolean {
 
 function hasPhone(text: string): boolean {
   if (/(\+?234|\b0)[789][01]\d([\s.\-]*\d){7}/.test(text)) return true;
+  // Country code on its own, or a leading-zero chunk like "0803" / "080312" (the start of a number).
+  if (/\+\s*234/.test(text)) return true;
+  if (/(^|[^\d₦,.])0[\s.\-]*[1-9](?:[\s.\-]*\d){2,}/.test(text.replace(/\b\d{1,2}:\d{2}\b/g, ' '))) return true;
   // Digit runs with separators. Money like "15,000" or "₦25000" is allowed — commas/naira
   // are not stripped, so amounts below 7 contiguous digits pass.
   const withoutMoney = text.replace(/(₦|ngn|n)\s?\d[\d,]*(\.\d+)?/gi, ' ').replace(/\b\d{1,3}(,\d{3})+\b/g, ' ');
   if (hasPhoneLikeRun(withoutMoney)) return true;
   if (hasPhoneLikeRun(normaliseLookalikes(withoutMoney))) return true;
   const spoken = normaliseSpokenDigits(withoutMoney);
-  return spoken.split(' ').some(isPhoneLikeRun);
+  // Spelled-out digits are only ever used to dodge the filter: a spoken "zero eight zero" is enough.
+  return spoken.split(' ').some((r) => isPhoneLikeRun(r) || (r.startsWith('0') && r.length >= 3));
 }
 
 const WARNINGS: Record<ViolationType, string> = {
-  phone_number: 'Phone numbers can’t be shared on Sleek — in any form.',
+  phone_number: 'Phone numbers can’t be shared on Sleek — in any form, even split across messages. Agree prices in the Price Pool.',
   email: 'Email addresses can’t be shared on Sleek.',
   link: 'Links can’t be shared in chat.',
   off_app: 'Please keep the conversation inside Sleek. Moving off the app removes your escrow protection.',
   off_app_payment: 'All payments must go through Sleek Escrow. Direct payments are not protected and are not allowed.',
 };
 
-export function moderateMessage(text: string): ModerationResult {
+/** A message that is mostly digits or number words — the kind used to leak a number piece by piece. */
+function isDigitChunk(text: string): boolean {
+  const n = normaliseForChecks(text).toLowerCase();
+  const digits = (n.match(/\d/g) ?? []).length + (n.match(new RegExp(`\\b(${NUMBER_WORD_LIST.join('|')}|oh)\\b`, 'g')) ?? []).length;
+  const letters = n.replace(new RegExp(`\\b(${NUMBER_WORD_LIST.join('|')}|oh)\\b`, 'g'), '').replace(/[^a-z]/g, '').length;
+  return digits >= 2 && letters <= 4;
+}
+
+export interface ModerationOptions {
+  /** The sender's recent messages in the same chat (oldest first), to catch numbers split across messages. */
+  recent?: string[];
+}
+
+export function moderateMessage(text: string, opts: ModerationOptions = {}): ModerationResult {
   const violations = new Set<ViolationType>();
   const trimmed = text.trim();
+  const norm = normaliseForChecks(trimmed);
 
-  if (hasPhone(trimmed)) violations.add('phone_number');
-  if (EMAIL_RE.test(trimmed) || (EMAIL_PROVIDER_RE.test(trimmed) && /\b(at|@|dot|mail)\b/i.test(trimmed))) {
+  if (hasPhone(norm)) violations.add('phone_number');
+  // Split across messages: "0803" … "123" … "4567"
+  if (!violations.has('phone_number') && opts.recent?.length && isDigitChunk(trimmed)) {
+    const chunks = opts.recent.filter(isDigitChunk).slice(-4);
+    if (chunks.length && hasPhone(normaliseForChecks([...chunks, trimmed].join(' ')))) violations.add('phone_number');
+  }
+  if (EMAIL_RE.test(norm) || AT_ADDRESS_RE.test(norm) || EMAIL_PROVIDER_RE.test(norm) || EMAIL_WORD_RE.test(norm)) {
     violations.add('email');
   }
-  if (LINK_RE.test(trimmed) || SPOKEN_LINK_RE.test(trimmed)) violations.add('link');
+  if (LINK_RE.test(norm) || SPOKEN_LINK_RE.test(norm)) violations.add('link');
   for (const { re, type } of OFF_APP_PATTERNS) {
-    if (re.test(trimmed)) violations.add(type);
+    if (re.test(norm)) violations.add(type);
   }
 
   const list = [...violations];
@@ -210,7 +274,7 @@ const STRONG_DIGIT_WORD_RE = new RegExp(
 );
 
 export function redact(text: string): string {
-  return text
+  return normaliseForChecks(text)
     .replace(/\d/g, '•')
     .replace(STRONG_DIGIT_WORD_RE, '•')
     .replace(/\b(oh|o)\b(?=\s*•)/gi, '•')

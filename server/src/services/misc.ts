@@ -4,6 +4,7 @@ import * as Esc from '../../../src/domain/escrow';
 import type { Artisan, CartLine, Customer, DeliveryTarget, Order } from '../../../src/domain/types';
 import type { Session } from '../auth';
 import type { Deps } from '../context';
+import { moderateMessage } from '../../../src/domain/moderation';
 import { badRequest, forbidden, notFound, ruleViolation } from '../errors';
 import { newId } from '../ids';
 import { getJob, getUser, notify, saveUser } from '../repo';
@@ -49,6 +50,9 @@ export async function me(deps: Deps, s: Session) {
 
 export async function addAddress(deps: Deps, s: Session, addr: Customer['addresses'][number]) {
   if (s.role !== 'customer') throw forbidden();
+  // The address is shown to the artisan after escrow — it must not carry contact details.
+  const m = moderateMessage([addr.label, addr.line1, addr.landmark ?? ''].join(' '));
+  if (!m.allowed) throw ruleViolation('Addresses can’t include phone numbers, emails or links. Sleek shares the address with your artisan for you.', 'message_blocked');
   return deps.db.tx(async (c) => {
     const u = await getUser<Customer>(deps, s.userId, c, true);
     u.addresses = [...u.addresses.filter((a) => a.label !== addr.label), addr];

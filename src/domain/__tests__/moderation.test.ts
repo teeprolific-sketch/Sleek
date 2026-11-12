@@ -84,3 +84,50 @@ describe('chat moderation — allows normal job talk', () => {
     expect({ t, v: r.violations }).toEqual({ t, v: [] });
   });
 });
+
+describe('chat moderation — hard-to-catch numbers and emails', () => {
+  it.each([
+    '０８０３１２３４５６７', // full-width digits
+    '٠٨٠٣١٢٣٤٥٦٧', // Arabic-Indic digits
+    'zero8zero3one2three4five6seven', // glued number words
+    '0803', // a number prefix on its own
+    '080312',
+    'zero eight zero',
+    '+234',
+    '0 8 0 3',
+  ])('phone fragment: %s', (t) => {
+    expect(moderateMessage(t).violations).toContain('phone_number');
+  });
+
+  it.each(['a.m.a.k.a@g.m.a.i.l.com', 'amaka＠gmail．com', 'amaka gmail', 'amakajohnson gmail com', 'mail: amaka.j', 'email me', 'what is your e-mail', 'amaka@gmail'])('email: %s', (t) => {
+    expect(moderateMessage(t).violations).toContain('email');
+  });
+
+  it('catches a number split across several messages', () => {
+    expect(moderateMessage('803').allowed).toBe(true);
+    expect(moderateMessage('123', { recent: ['803'] }).allowed).toBe(true);
+    const r = moderateMessage('4567', { recent: ['803', '123'] });
+    expect(r.allowed).toBe(false);
+    expect(r.violations).toContain('phone_number');
+    expect(moderateMessage('four five six seven', { recent: ['eight oh three', 'one two three'] }).allowed).toBe(false);
+  });
+
+  it('does not join normal messages that happen to contain numbers', () => {
+    expect(moderateMessage('I can do it for ₦12,000', { recent: ['Room 12 on the 3rd floor', 'Come by 10am'] }).allowed).toBe(true);
+    expect(moderateMessage('2 sockets and 1 switch', { recent: ['It is flat 4, block 7'] }).allowed).toBe(true);
+  });
+
+  it.each([
+    'I will be there by 9:30',
+    'The bill is 25000 naira',
+    'It needs 0.5 litres of oil',
+    'Plot 10, 2nd avenue',
+    'Between 10 and 12 tomorrow',
+    'The wall is 5 metres by 3 metres',
+    'It is a 2019 Corolla',
+    'Someone else did the wiring before',
+    'One of the two bulbs is fine',
+  ])('still allows: %s', (t) => {
+    expect(moderateMessage(t)).toMatchObject({ allowed: true });
+  });
+});

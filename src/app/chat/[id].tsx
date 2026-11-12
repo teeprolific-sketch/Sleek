@@ -41,7 +41,10 @@ export default function Chat() {
     ],
     [allMessages, outboxAll, id],
   );
-  const live = useMemo(() => (text.trim().length > 3 ? moderateMessage(text) : null), [text]);
+  const recentTextsBy = useStore((s) => s.recentTextsBy);
+  const myParty = session.userId === job?.customerId ? 'customer' : 'artisan';
+  const live = useMemo(() => (text.trim() ? moderateMessage(text, { recent: recentTextsBy(id, myParty) }) : null), [text, recentTextsBy, id, myParty]);
+  const sendBlocked = !!live && !live.allowed;
 
   if (!job || !artisan || !customer) {
     return (
@@ -171,10 +174,11 @@ export default function Chat() {
             />
             <Pressable
               onPress={send}
-              disabled={!text.trim()}
+              disabled={!text.trim() || sendBlocked}
               accessibilityRole="button"
               accessibilityLabel="Send"
-              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: text.trim() ? c.primary : c.border, alignItems: 'center', justifyContent: 'center' }}
+              accessibilityState={{ disabled: !text.trim() || sendBlocked }}
+              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: text.trim() && !sendBlocked ? c.primary : c.border, alignItems: 'center', justifyContent: 'center' }}
             >
               <Icon name="send" color="#fff" size={18} />
             </Pressable>

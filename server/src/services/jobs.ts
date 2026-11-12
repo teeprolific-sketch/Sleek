@@ -131,7 +131,14 @@ export async function sendMessage(deps: Deps, s: Session, jobId: string, text: s
   const trimmed = text.trim();
   if (!trimmed) throw badRequest('Message is empty.');
   if (trimmed.length > 1000) throw badRequest('Message is too long.');
-  const res = moderateMessage(trimmed);
+  // The sender's last few texts in this chat (15 min) catch a number split across messages.
+  const recent = (
+    await deps.db.query<{ text: string }>(
+      "SELECT data->>'text' AS text FROM messages WHERE job_id = $1 AND data->>'from' = $2 AND data->>'kind' = 'text' AND created_at >= $3 ORDER BY created_at DESC LIMIT 4",
+      [jobId, party, new Date(deps.now() - 15 * 60_000)],
+    )
+  ).map((r) => r.text).reverse();
+  const res = moderateMessage(trimmed, { recent });
   if (!res.allowed) {
     await recordViolation(deps, s.userId, party, jobId, res.violations, res.redacted);
     throw ruleViolation(res.warning!, 'message_blocked', { violations: res.violations });
@@ -549,6 +556,8 @@ export async function submitReview(deps: Deps, s: Session, jobId: string, rating
 // ---------------------------------------------------------------------------
 export async function openDispute(deps: Deps, s: Session, jobId: string, reason: DisputeReason, details: string, evidenceMediaIds: string[]) {
   if (details.trim().length < 15) throw badRequest('Please describe the problem in a few sentences (at least 15 characters).');
+  const dm = moderateMessage(details);
+  if (!dm.allowed) throw ruleViolation(dm.warning!, 'message_blocked', { violations: dm.violations });
   return withJob(deps, jobId, async (job, c) => {
     const party = partyOf(job, s);
     if (!Esc.canDispute(job)) throw ruleViolation('Disputes can be opened while money is held in escrow.', 'cannot_dispute');

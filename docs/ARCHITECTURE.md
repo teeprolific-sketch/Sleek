@@ -54,5 +54,5 @@ There is no gallery or file picker anywhere. `utils/captureBus.ts` opens `/captu
 
 ## Theming
 
-Three themes, picked in Profile or Settings: **White** (default; black on white), **Black** (white on black, for night and OLED screens) and **Blue** (the Sleek brand look: sky-blue actions, deep-blue text). Each is a full token set in `src/theme`, including tokens for text on primary colours and for the feature ("hero") cards. That keeps every screen readable in all three themes. The logo mark stays Sleek sky blue in every theme. Older saved settings are migrated: Light → Blue, Dark → Black, System → White.
+Three themes, picked in Profile or Settings: **White** (default; white with sky blue), **Black** (only black, white and a very light sky blue) and **Blue** (the Sleek brand look: sky-blue actions, deep-blue text and feature cards). Each is a full token set in `src/theme`, including tokens for text on primary colours, the feature ("hero") cards and the logo, so every screen stays readable in all three themes. Status colours (green, amber, red) are kept in every theme because they carry meaning: paid, waiting, safety. Older saved settings are migrated: Light → Blue, Dark → Black, System → White.
 

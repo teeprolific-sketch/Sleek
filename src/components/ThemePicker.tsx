@@ -6,7 +6,7 @@ import { Icon, Txt } from './ui';
 
 const OPTIONS: { name: ThemeName; label: string; note: string }[] = [
   { name: 'white', label: 'White', note: 'Default' },
-  { name: 'black', label: 'Black', note: 'Dark' },
+  { name: 'black', label: 'Black', note: 'Light blue' },
   { name: 'blue', label: 'Blue', note: 'Sleek brand' },
 ];
 

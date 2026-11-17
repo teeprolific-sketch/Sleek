@@ -25,7 +25,7 @@ export default function Account({ children }: { children?: React.ReactNode }) {
     <Screen title="Profile" back={false}>
       <Card>
         <Row gap={space.md}>
-          <Avatar name={display} color={user.role === 'artisan' ? user.avatarColor : '#0B3D91'} size={60} />
+          <Avatar name={display} color={user.role === 'artisan' ? user.avatarColor : undefined} size={60} />
           <View style={{ flex: 1 }}>
             <Txt v="h2">{display}</Txt>
             <Txt v="small" muted>

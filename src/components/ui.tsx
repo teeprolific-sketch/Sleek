@@ -365,9 +365,12 @@ export function Banner({ tone = 'info', icon, title, body, action, onAction }: {
 }
 
 export function Avatar({ name, color, size = 44 }: { name: string; color?: string; size?: number }) {
+  const { c } = useTheme();
+  // Black theme keeps to black, white and light blue only.
+  const mono = c.name === 'black';
   return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color ?? '#0EA5E9', alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ color: '#fff', fontWeight: '800', fontSize: size * 0.38 }}>{initials(name)}</Text>
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: mono ? c.surfaceAlt : color ?? c.primary, borderWidth: mono ? 1 : 0, borderColor: c.primary, alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ color: mono ? c.primary : '#fff', fontWeight: '800', fontSize: size * 0.38 }}>{initials(name)}</Text>
     </View>
   );
 }

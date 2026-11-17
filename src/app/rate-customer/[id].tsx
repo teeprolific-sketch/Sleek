@@ -32,7 +32,7 @@ export default function RateCustomer() {
   return (
     <Screen title="Rate your customer" footer={<Button title="Submit rating" disabled={!ready} onPress={() => { const r = rate(job.id, { ...scores, comment }); if (!r.ok) return showMessage('Not submitted', r.error); router.back(); }} />}>
       <View style={{ alignItems: 'center', paddingVertical: space.md }}>
-        <Avatar name={customer.name} color="#0B3D91" size={60} />
+        <Avatar name={customer.name} size={60} />
         <Txt v="h2" style={{ marginTop: space.sm }}>
           {customer.name}
         </Txt>

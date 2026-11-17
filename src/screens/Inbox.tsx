@@ -24,7 +24,7 @@ export default function Inbox({ title = 'Chats', emptyBody, back = false }: { ti
         const isCustomer = j.customerId === session.userId;
         const a = artisans.find((x) => x.id === j.artisanId);
         const cu = customers.find((x) => x.id === j.customerId);
-        return { job: j, last, name: isCustomer ? a?.businessName ?? a?.name ?? '' : cu?.name ?? '', color: isCustomer ? a?.avatarColor : '#0B3D91' };
+        return { job: j, last, name: isCustomer ? a?.businessName ?? a?.name ?? '' : cu?.name ?? '', color: isCustomer ? a?.avatarColor : undefined };
       })
       .sort((x, y) => (y.last?.at ?? y.job.updatedAt).localeCompare(x.last?.at ?? x.job.updatedAt));
   }, [jobs, messages, artisans, customers, session.userId]);

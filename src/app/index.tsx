@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { Logo } from '../components/Logo';
 import { Txt } from '../components/ui';
 import { useStore } from '../store';
-import { brand, useTheme } from '../theme';
+import { useTheme } from '../theme';
 
 /** Splash → routes the user to onboarding, sign-in or their role's home. */
 export default function Splash() {
@@ -26,11 +26,11 @@ export default function Splash() {
   }
   return (
     <View style={{ flex: 1, backgroundColor: c.bg, alignItems: 'center', justifyContent: 'center' }}>
-      <Logo height={64} tone={isDark ? 'auto' : 'sky'} />
+      <Logo height={64} />
       <Txt muted style={{ marginTop: 12 }}>
         Trusted artisans. Protected payments.
       </Txt>
-      <Txt v="small" color={brand.sky} style={{ position: 'absolute', bottom: 48, fontWeight: '700' }}>
+      <Txt v="small" color={c.textMuted} style={{ position: 'absolute', bottom: 48, fontWeight: '700' }}>
         by Me AI
       </Txt>
     </View>

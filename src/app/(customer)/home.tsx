@@ -83,20 +83,20 @@ export default function CustomerHome() {
         <CoachTip id="tip_first_booking" title="New here? How Sleek keeps you safe" body="1. Pick a verified artisan. 2. Agree the price in chat. 3. Pay into escrow — the artisan only gets paid after you approve the work." icon="school-outline" />
       ) : null}
 
-      <Card onPress={() => router.push('/ugent')} style={{ marginTop: space.md, backgroundColor: '#0B3D91', borderColor: '#0B3D91' }}>
+      <Card onPress={() => router.push('/ugent')} style={{ marginTop: space.md, backgroundColor: c.heroBg, borderColor: c.heroBg }}>
         <Row gap={space.md}>
-          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#0EA5E9', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="sparkles" color="#fff" />
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.heroAccent, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="sparkles" color={c.heroAccentText} />
           </View>
           <View style={{ flex: 1 }}>
-            <Txt v="bodyStrong" color="#fff">
+            <Txt v="bodyStrong" color={c.heroText}>
               {t('home.ugentTitle')}
             </Txt>
-            <Txt v="small" color="#BFE6FB">
+            <Txt v="small" color={c.heroMuted}>
               {t('home.ugentBody')}
             </Txt>
           </View>
-          <Icon name="chevron-forward" color="#fff" />
+          <Icon name="chevron-forward" color={c.heroText} />
         </Row>
       </Card>
 

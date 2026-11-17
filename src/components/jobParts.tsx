@@ -36,7 +36,7 @@ export function JobTimeline({ job, viewer }: { job: Job; viewer: 'customer' | 'a
           <View key={s.key} style={{ flexDirection: 'row', gap: space.md }} accessible accessibilityLabel={`${t(`timeline.${s.key}` as TKey)}: ${s.state}`}>
             <View style={{ alignItems: 'center', width: 24 }}>
               <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: s.state === 'upcoming' ? 'transparent' : color, borderWidth: 2, borderColor: color, alignItems: 'center', justifyContent: 'center' }}>
-                {s.state === 'done' ? <Icon name="checkmark" size={14} color="#fff" /> : s.state === 'current' ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' }} /> : s.state === 'halted' ? <Icon name="pause" size={12} color="#fff" /> : null}
+                {s.state === 'done' ? <Icon name="checkmark" size={14} color="#fff" /> : s.state === 'current' ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c.primaryText }} /> : s.state === 'halted' ? <Icon name="pause" size={12} color="#fff" /> : null}
               </View>
               {!last ? <View style={{ width: 2, flex: 1, minHeight: 22, backgroundColor: s.state === 'done' ? c.success : c.border }} /> : null}
             </View>

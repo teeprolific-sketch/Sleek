@@ -180,7 +180,7 @@ export default function Chat() {
               accessibilityState={{ disabled: !text.trim() || sendBlocked }}
               style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: text.trim() && !sendBlocked ? c.primary : c.border, alignItems: 'center', justifyContent: 'center' }}
             >
-              <Icon name="send" color="#fff" size={18} />
+              <Icon name="send" color={text.trim() && !sendBlocked ? c.primaryText : c.textMuted} size={18} />
             </Pressable>
           </Row>
         )}
@@ -234,14 +234,14 @@ function Bubble({ m, mine, job, queuedLabel }: { m: ChatMessage; mine: boolean; 
           <View>
             <Image source={{ uri: m.media.uri }} style={{ width: 200, height: 200, borderRadius: 14 }} />
             <Row gap={4} style={{ padding: 6 }}>
-              <Icon name="camera-outline" size={12} color={mine ? '#fff' : c.textMuted} />
-              <Txt v="tiny" color={mine ? '#fff' : c.textMuted}>
+              <Icon name="camera-outline" size={12} color={mine ? c.primaryText : c.textMuted} />
+              <Txt v="tiny" color={mine ? c.primaryText : c.textMuted}>
                 {m.text.toUpperCase()} · LOGGED
               </Txt>
             </Row>
           </View>
         ) : (
-          <Txt color={mine ? '#fff' : c.text}>{m.text}</Txt>
+          <Txt color={mine ? c.primaryText : c.text}>{m.text}</Txt>
         )}
       </View>
       <Txt v="tiny" muted style={{ alignSelf: mine ? 'flex-end' : 'flex-start', marginTop: 2 }}>

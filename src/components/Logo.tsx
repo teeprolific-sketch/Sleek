@@ -29,10 +29,10 @@ export function LogoMark({ size = 40, color = brand.sky }: { size?: number; colo
 
 /** Horizontal logo: mark + "Sleek" wordmark. `tone` picks the colourway for the background it sits on. */
 export function Logo({ height = 36, tone = 'auto' }: { height?: number; tone?: 'auto' | 'sky' | 'white' | 'two-tone' }) {
-  const { isDark } = useTheme();
-  const t = tone === 'auto' ? (isDark ? 'dark' : 'two-tone') : tone;
-  const markColor = t === 'white' ? '#FFFFFF' : brand.sky;
-  const wordColor = t === 'white' ? '#FFFFFF' : t === 'sky' ? brand.sky : t === 'dark' ? '#EEF4FF' : brand.deep;
+  const { c } = useTheme();
+  // The mark always stays Sleek sky blue; the wordmark follows the theme (black, white or deep blue).
+  const markColor = tone === 'white' ? '#FFFFFF' : brand.sky;
+  const wordColor = tone === 'white' ? '#FFFFFF' : tone === 'sky' ? brand.sky : tone === 'two-tone' ? brand.deep : c.logoWord;
   const [, , vw, vh] = WORDMARK_VIEWBOX.split(' ').map(Number);
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: height * 0.18 }} accessibilityRole="image" accessibilityLabel="Sleek">

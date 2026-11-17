@@ -7,7 +7,7 @@ import { DialogHost } from '../components/dialog';
 import { ErrorScreen, useNetworkWatcher } from '../components/feedback';
 import { translate, type Lang } from '../i18n';
 import { useStore } from '../store';
-import { brand, ThemeProvider, useTheme } from '../theme';
+import { ThemeProvider, useTheme } from '../theme';
 
 function Shell() {
   const { c, isDark } = useTheme();
@@ -30,7 +30,7 @@ function Shell() {
   if (!hydrated) {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={brand.sky} />
+        <ActivityIndicator color={c.primary} />
       </View>
     );
   }

@@ -3,9 +3,9 @@ import React from 'react';
 import { View } from 'react-native';
 import { confirmAction } from '../components/domain';
 import { Logo } from '../components/Logo';
+import { ThemePicker } from '../components/ThemePicker';
 import { useT } from '../i18n';
-import { Avatar, Card, ListItem, Row, Screen, Section, Segmented, Txt } from '../components/ui';
-import type { ThemeMode } from '../domain/types';
+import { Avatar, Card, ListItem, Row, Screen, Section, Txt } from '../components/ui';
 import { useCurrentUser, useStore, useUnreadCount } from '../store';
 import { space } from '../theme';
 import { maskPhone } from '../utils/format';
@@ -13,8 +13,6 @@ import { maskPhone } from '../utils/format';
 /** Profile & settings shared by every role, with role-specific sections passed in. */
 export default function Account({ children }: { children?: React.ReactNode }) {
   const user = useCurrentUser();
-  const mode = useStore((s) => s.settings.themeMode);
-  const setTheme = useStore((s) => s.setTheme);
   const signOut = useStore((s) => s.signOut);
   const unread = useUnreadCount();
   const t = useT();
@@ -41,15 +39,7 @@ export default function Account({ children }: { children?: React.ReactNode }) {
       </Card>
 
       <Section title="Appearance">
-        <Segmented<ThemeMode>
-          value={mode}
-          onChange={setTheme}
-          options={[
-            { value: 'system', label: 'System' },
-            { value: 'light', label: 'Light' },
-            { value: 'dark', label: 'Dark' },
-          ]}
-        />
+        <ThemePicker />
       </Section>
 
       {children}

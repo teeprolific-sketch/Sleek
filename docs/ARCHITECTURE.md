@@ -53,4 +53,6 @@ There is no gallery or file picker anywhere. `utils/captureBus.ts` opens `/captu
 `useNetworkWatcher` (NetInfo) feeds `store.network`. A banner explains what still works. Chat messages written offline go to an outbox and send automatically when the connection returns. Money and state-changing actions refuse with a clear message instead of failing silently. Settings → Demo → "Simulate no network" lets you try it.
 
 ## Theming
-`src/theme` defines light and dark palettes from the brand colours (#0EA5E9 sky, #0B3D91 deep, #FFFFFF). Every component reads `useTheme()`. The mode can be System, Light or Dark and is persisted.
+
+Three themes, picked in Profile or Settings: **White** (default; black on white), **Black** (white on black, for night and OLED screens) and **Blue** (the Sleek brand look: sky-blue actions, deep-blue text). Each is a full token set in `src/theme`, including tokens for text on primary colours and for the feature ("hero") cards. That keeps every screen readable in all three themes. The logo mark stays Sleek sky blue in every theme. Older saved settings are migrated: Light → Blue, Dark → Black, System → White.
+

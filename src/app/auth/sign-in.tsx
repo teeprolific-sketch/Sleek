@@ -4,13 +4,14 @@ import { View } from 'react-native';
 import { Logo } from '../../components/Logo';
 import { Banner, Button, Card, Divider, Field, ListItem, Screen, Spacer, Txt } from '../../components/ui';
 import { useStore } from '../../store';
-import { brand, space } from '../../theme';
+import { space, useTheme } from '../../theme';
 
 /**
  * Phone + OTP sign-in. In production the OTP is sent by the backend (SMS/WhatsApp
  * OTP via a provider such as Termii) and verified server-side.
  */
 export default function SignIn() {
+  const { c } = useTheme();
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [stage, setStage] = useState<'phone' | 'otp'>('phone');
@@ -79,7 +80,7 @@ export default function SignIn() {
       </Card>
       <Spacer />
       <Banner tone="primary" icon="lock-closed" body="Sleek never asks for your password, PIN or card details in chat." />
-      <Txt v="small" center style={{ marginTop: space.xl, color: brand.sky, fontWeight: '700' }}>
+      <Txt v="small" center style={{ marginTop: space.xl, color: c.textMuted, fontWeight: '700' }}>
         Sleek by Me AI
       </Txt>
     </Screen>

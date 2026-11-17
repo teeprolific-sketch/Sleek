@@ -47,14 +47,14 @@ export default function TrustSafety() {
         <ListItem icon="flag-outline" title="Dispute Centre" subtitle="Problems with a paid job" onPress={() => router.push('/disputes')} />
         <ListItem icon="help-circle-outline" title="Help & Support" subtitle="FAQs and contact support" onPress={() => router.push('/help')} />
       </Section>
-      <Card style={{ backgroundColor: '#0B3D91', borderColor: '#0B3D91' }}>
+      <Card style={{ backgroundColor: c.heroBg, borderColor: c.heroBg }}>
         <Row gap={space.md}>
-          <Icon name="shield-checkmark" size={36} color="#0EA5E9" />
+          <Icon name="shield-checkmark" size={36} color={c.heroAccent} />
           <View style={{ flex: 1 }}>
-            <Txt v="h3" color="#fff">
+            <Txt v="h3" color={c.heroText}>
               Stay on Sleek, stay protected
             </Txt>
-            <Txt v="small" color="#BFE6FB">
+            <Txt v="small" color={c.heroMuted}>
               Deals made outside the app are not covered by escrow, refunds or dispute resolution.
             </Txt>
           </View>

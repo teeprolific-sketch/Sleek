@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import Svg, { Circle, G, Line, Text as SvgText } from 'react-native-svg';
 import { areaPoint } from '../domain/geo';
 import type { FilteredArtisan } from '../domain/matching';
-import { brand, radius, space, useTheme } from '../theme';
+import { radius, space, useTheme } from '../theme';
 import { initials } from '../utils/format';
 import { Chip, Icon, Row, Txt } from './ui';
 
@@ -66,7 +66,7 @@ export function NearbyMap({ results, center }: { results: FilteredArtisan[]; cen
           ))}
           <Line x1={mid} y1={10} x2={mid} y2={size - 10} stroke={c.border} strokeWidth={0.5} />
           <Line x1={10} y1={mid} x2={size - 10} y2={mid} stroke={c.border} strokeWidth={0.5} />
-          <Circle cx={mid} cy={mid} r={9} fill={brand.deep} stroke="#fff" strokeWidth={2} />
+          <Circle cx={mid} cy={mid} r={9} fill={c.text} stroke={c.bg} strokeWidth={2} />
           {dots.map(({ r, x, y }) => (
             <G key={r.artisan.id} onPress={() => router.push({ pathname: '/artisan/[id]', params: { id: r.artisan.id } })}>
               <Circle cx={mid + x * scale} cy={mid - y * scale} r={14} fill={r.artisan.avatarColor} stroke="#fff" strokeWidth={2} />

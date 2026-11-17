@@ -261,7 +261,7 @@ function initialData(): Data {
   return {
     onboarded: false,
     session: {},
-    settings: { themeMode: 'system', notifications: true, dataSaver: false, ugentLinked: false, language: 'en', seenTips: [] },
+    settings: { themeMode: 'white', notifications: true, dataSaver: false, ugentLinked: false, language: 'en', seenTips: [] },
     customers,
     artisans,
     admins: [SEED_ADMIN],
@@ -1166,7 +1166,7 @@ export const useStore = create<State>()(
     },
     {
       name: 'sleek-store',
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (s) => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1174,8 +1174,15 @@ export const useStore = create<State>()(
         return Object.fromEntries(Object.entries(rest).filter(([, v]) => typeof v !== 'function')) as unknown as State;
       },
       onRehydrateStorage: () => () => useStore.setState({ hydrated: true }),
-      // v1 → v2 added history, favourites, referrals and more. Demo data is re-seeded; theme is kept.
-      migrate: (old) => ({ ...initialData(), settings: { ...initialData().settings, themeMode: (old as Partial<State>)?.settings?.themeMode ?? 'system' } }) as unknown as State,
+      // v1 → v2 re-seeded demo data (new history, favourites, referrals). v2 → v3 keeps all data and maps the
+      // old System/Light/Dark setting onto the White (default) / Blue / Black themes.
+      migrate: (old, version) => {
+        const prev = (old ?? {}) as Partial<State>;
+        const oldMode = prev.settings?.themeMode as string | undefined;
+        const themeMode = oldMode === 'light' ? 'blue' : oldMode === 'dark' ? 'black' : oldMode === 'white' || oldMode === 'black' || oldMode === 'blue' ? oldMode : 'white';
+        if (version < 2) return { ...initialData(), settings: { ...initialData().settings, themeMode } } as unknown as State;
+        return { ...prev, settings: { ...initialData().settings, ...prev.settings, themeMode } } as unknown as State;
+      },
     },
   ),
 );

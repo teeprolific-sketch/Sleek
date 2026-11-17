@@ -8,7 +8,7 @@ import { describeSchedule } from '../../domain/payouts';
 import { isTrusted } from '../../domain/trust';
 import type { LedgerEntry } from '../../domain/types';
 import { balanceOf, useMyArtisan, useStore } from '../../store';
-import { brand, radius, space, useTheme } from '../../theme';
+import { radius, space, useTheme } from '../../theme';
 import { day, naira } from '../../utils/format';
 
 type Filter = 'all' | 'in' | 'out';
@@ -61,14 +61,14 @@ export default function Earnings() {
 
   return (
     <Screen title="Earnings & payouts" back={false} right={<Pressable onPress={() => router.push('/payout-settings')} hitSlop={8} accessibilityLabel="Payout settings"><Icon name="settings-outline" /></Pressable>}>
-      <Card style={{ backgroundColor: brand.deep, borderColor: brand.deep }}>
-        <Txt v="small" color="#BFE6FB">
+      <Card style={{ backgroundColor: c.heroBg, borderColor: c.heroBg }}>
+        <Txt v="small" color={c.heroMuted}>
           Available to withdraw
         </Txt>
-        <Txt v="h1" color="#fff" style={{ fontSize: 34 }}>
+        <Txt v="h1" color={c.heroText} style={{ fontSize: 34 }}>
           {naira(balance)}
         </Txt>
-        <Txt v="small" color="#BFE6FB">
+        <Txt v="small" color={c.heroMuted}>
           {me.payoutAccount ? `${me.payoutAccount.bankName} ••${me.payoutAccount.accountNumberLast4}` : 'No payout account yet'} · {describeSchedule(me.payoutSchedule)}
         </Txt>
       </Card>

@@ -84,8 +84,8 @@ export default function Ugent() {
     return (
       <Screen title="Connect Ugent">
         <View style={{ alignItems: 'center', paddingVertical: space.xl }}>
-          <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: '#0B3D91', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="sparkles" size={40} color="#0EA5E9" />
+          <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: c.heroBg, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="sparkles" size={40} color={c.heroAccent} />
           </View>
           <Txt v="h2" style={{ marginTop: space.lg }}>
             Ugent by Me AI
@@ -165,7 +165,7 @@ export default function Ugent() {
         {turns.map((t, i) => (
           <View key={i} style={{ alignSelf: t.from === 'user' ? 'flex-end' : 'flex-start', maxWidth: '92%' }}>
             <View style={{ backgroundColor: t.from === 'user' ? c.primary : c.surface, padding: space.md, borderRadius: radius.lg }}>
-              <Txt color={t.from === 'user' ? '#fff' : c.text}>{t.text}</Txt>
+              <Txt color={t.from === 'user' ? c.primaryText : c.text}>{t.text}</Txt>
             </View>
             {t.results?.map((r) => (
               <Card key={r.artisan_id} style={{ marginTop: space.sm }}>

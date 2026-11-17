@@ -167,7 +167,7 @@ export function Divider() {
 // Controls
 // ---------------------------------------------------------------------------
 
-type BtnVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'deep';
+type BtnVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'deep' | 'hero';
 
 export function Button({
   title,
@@ -191,8 +191,8 @@ export function Button({
   full?: boolean;
 }) {
   const { c } = useTheme();
-  const bg = { primary: c.primary, secondary: c.primarySoft, ghost: 'transparent', danger: c.danger, deep: '#0B3D91' }[variant];
-  const fg = { primary: c.primaryText, secondary: c.scheme === 'dark' ? c.primary : '#0B3D91', ghost: c.primary, danger: '#FFFFFF', deep: '#FFFFFF' }[variant];
+  const bg = { primary: c.primary, secondary: c.primarySoft, ghost: 'transparent', danger: c.danger, deep: c.heroBg, hero: c.heroAccent }[variant];
+  const fg = { primary: c.primaryText, secondary: c.primaryStrong, ghost: c.primaryStrong, danger: '#FFFFFF', deep: c.heroText, hero: c.heroAccentText }[variant];
   const isDisabled = disabled || loading;
   return (
     <Pressable
@@ -268,8 +268,8 @@ export function Chip({ label, selected, onPress, icon }: { label: string; select
       onPress={onPress}
       style={[styles.chip, { backgroundColor: selected ? c.primary : c.surface, borderColor: selected ? c.primary : c.border }]}
     >
-      {icon ? <Icon name={icon} size={14} color={selected ? '#fff' : c.text} /> : null}
-      <Text style={[font.small, { color: selected ? '#fff' : c.text, fontWeight: '600' }]}>{label}</Text>
+      {icon ? <Icon name={icon} size={14} color={selected ? c.primaryText : c.text} /> : null}
+      <Text style={[font.small, { color: selected ? c.primaryText : c.text, fontWeight: '600' }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -306,7 +306,7 @@ export function Toggle({ value, onChange, label }: { value: boolean; onChange: (
       onPress={() => onChange(!value)}
       style={[styles.toggle, { backgroundColor: value ? c.primary : c.border }]}
     >
-      <View style={[styles.knob, { transform: [{ translateX: value ? 20 : 0 }] }]} />
+      <View style={[styles.knob, { backgroundColor: value ? c.primaryText : '#FFFFFF', transform: [{ translateX: value ? 20 : 0 }] }]} />
     </Pressable>
   );
 }
@@ -318,7 +318,7 @@ export function Toggle({ value, onChange, label }: { value: boolean; onChange: (
 export function toneColors(c: Palette, tone: StatusTone | 'success' | 'danger') {
   return {
     info: { bg: c.infoSoft, fg: c.info },
-    primary: { bg: c.primarySoft, fg: c.scheme === 'dark' ? c.primary : '#0369A1' },
+    primary: { bg: c.primarySoft, fg: c.primaryStrong },
     success: { bg: c.successSoft, fg: c.success },
     warning: { bg: c.warningSoft, fg: c.warning },
     danger: { bg: c.dangerSoft, fg: c.danger },
@@ -378,7 +378,7 @@ export function Stars({ value, size = 14, onChange }: { value: number; size?: nu
     <Row gap={onChange ? 8 : 1}>
       {[1, 2, 3, 4, 5].map((i) => {
         const name = value >= i ? 'star' : value >= i - 0.5 ? 'star-half' : 'star-outline';
-        const star = <Icon key={i} name={name} size={size} color={c.scheme === 'dark' ? '#FBBF24' : '#F59E0B'} />;
+        const star = <Icon key={i} name={name} size={size} color={c.star} />;
         return onChange ? (
           <Pressable key={i} accessibilityRole="button" accessibilityLabel={`${i} star${i > 1 ? 's' : ''}`} onPress={() => onChange(i)} hitSlop={6}>
             {star}
@@ -411,7 +411,7 @@ export function ListItem({
     <Pressable accessibilityRole={onPress ? 'button' : undefined} onPress={onPress} style={({ pressed }) => [styles.listItem, { borderBottomColor: c.border }, pressed && onPress && { opacity: 0.7 }]}>
       {icon ? (
         <View style={[styles.listIcon, { backgroundColor: danger ? c.dangerSoft : c.primarySoft }]}>
-          <Icon name={icon} size={18} color={danger ? c.danger : c.scheme === 'dark' ? c.primary : '#0B3D91'} />
+          <Icon name={icon} size={18} color={danger ? c.danger : c.primaryStrong} />
         </View>
       ) : null}
       <View style={{ flex: 1 }}>
@@ -462,7 +462,7 @@ export function Steps({ steps, current }: { steps: string[]; current: number }) 
           <Row key={s} style={{ alignItems: 'flex-start' }} gap={space.md}>
             <View style={{ alignItems: 'center' }}>
               <View style={[styles.stepDot, { backgroundColor: done ? c.success : active ? c.primary : c.border }]}>
-                {done ? <Icon name="checkmark" size={12} color="#fff" /> : <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{i + 1}</Text>}
+                {done ? <Icon name="checkmark" size={12} color="#fff" /> : <Text style={{ color: active ? c.primaryText : '#fff', fontSize: 11, fontWeight: '700' }}>{i + 1}</Text>}
               </View>
               {i < steps.length - 1 ? <View style={{ width: 2, height: 22, backgroundColor: done ? c.success : c.border }} /> : null}
             </View>

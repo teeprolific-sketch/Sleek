@@ -12,7 +12,7 @@ export type ISODate = string;
 export type Role = 'customer' | 'artisan' | 'admin';
 export type ArtisanAccountType = 'individual' | 'team' | 'agency';
 
-export type ThemeMode = 'system' | 'light' | 'dark';
+export type ThemeMode = 'white' | 'black' | 'blue';
 
 // ---------------------------------------------------------------------------
 // Categories / skills

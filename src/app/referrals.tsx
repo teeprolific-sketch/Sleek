@@ -4,7 +4,7 @@ import { showMessage } from '../components/domain';
 import { Banner, Button, Card, EmptyState, Icon, KeyValue, Pill, Row, Screen, Section, Stat, Steps, Txt } from '../components/ui';
 import { makeReferralCode, QUALIFY_AFTER_JOBS, REFERRAL_REWARD } from '../domain/referrals';
 import { useCurrentUser, useStore } from '../store';
-import { brand, radius, space, useTheme } from '../theme';
+import { radius, space, useTheme } from '../theme';
 import { day, naira } from '../utils/format';
 
 export default function Referrals() {
@@ -36,21 +36,21 @@ export default function Referrals() {
 
   return (
     <Screen title="Refer & earn">
-      <Card style={{ backgroundColor: brand.deep, borderColor: brand.deep }}>
-        <Icon name="gift-outline" size={30} color={brand.sky} />
-        <Txt v="h2" color="#fff" style={{ marginTop: 6 }}>
+      <Card style={{ backgroundColor: c.heroBg, borderColor: c.heroBg }}>
+        <Icon name="gift-outline" size={30} color={c.heroAccent} />
+        <Txt v="h2" color={c.heroText} style={{ marginTop: 6 }}>
           Invite friends to Sleek
         </Txt>
-        <Txt v="small" color="#BFE6FB">
+        <Txt v="small" color={c.heroMuted}>
           Earn {naira(REFERRAL_REWARD.customer)} for each customer and {naira(REFERRAL_REWARD.artisan)} for each artisan you bring{user.role === 'customer' ? ' (as Sleek credit)' : ' (added to your earnings)'}.
         </Txt>
-        <Pressable onPress={copy} accessibilityRole="button" accessibilityLabel={`Copy code ${code}`} style={{ marginTop: space.md, borderRadius: radius.md, borderWidth: 1, borderStyle: 'dashed', borderColor: brand.sky, padding: space.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Txt v="h1" color="#fff" style={{ letterSpacing: 3 }}>
+        <Pressable onPress={copy} accessibilityRole="button" accessibilityLabel={`Copy code ${code}`} style={{ marginTop: space.md, borderRadius: radius.md, borderWidth: 1, borderStyle: 'dashed', borderColor: c.heroMuted, padding: space.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Txt v="h1" color={c.heroText} style={{ letterSpacing: 3 }}>
             {code}
           </Txt>
-          <Icon name="copy-outline" color="#fff" />
+          <Icon name="copy-outline" color={c.heroText} />
         </Pressable>
-        <Button title="Share invite" icon="share-social-outline" style={{ marginTop: space.md }} onPress={share} />
+        <Button variant="hero" title="Share invite" icon="share-social-outline" style={{ marginTop: space.md }} onPress={share} />
       </Card>
 
       <Row gap={space.sm} style={{ marginTop: space.md }}>

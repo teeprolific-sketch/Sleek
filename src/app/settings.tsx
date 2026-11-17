@@ -5,7 +5,7 @@ import { confirmAction } from '../components/domain';
 import { showMessage } from '../components/domain';
 import { Banner, Button, Card, Field, KeyValue, ListItem, Pill, Row, Screen, Section, Segmented, Toggle, Txt } from '../components/ui';
 import { LANGUAGES, useT } from '../i18n';
-import type { ThemeMode } from '../domain/types';
+import { ThemePicker } from '../components/ThemePicker';
 import { useCurrentUser, useStore } from '../store';
 import { space } from '../theme';
 
@@ -13,7 +13,6 @@ export default function Settings() {
   const user = useCurrentUser();
   const settings = useStore((s) => s.settings);
   const update = useStore((s) => s.updateSettings);
-  const setTheme = useStore((s) => s.setTheme);
   const resetDemo = useStore((s) => s.resetDemo);
   const setLanguage = useStore((s) => s.setLanguage);
   const setTrustedContact = useStore((s) => s.setTrustedContact);
@@ -24,7 +23,7 @@ export default function Settings() {
   return (
     <Screen title="Settings & privacy">
       <Section title="Theme" style={{ marginTop: 0 }}>
-        <Segmented<ThemeMode> value={settings.themeMode} onChange={setTheme} options={[{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />
+        <ThemePicker />
       </Section>
       <Section title={t('settings.language')}>
         <Card>

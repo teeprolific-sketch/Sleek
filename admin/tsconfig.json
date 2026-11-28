@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "lib": ["ES2021", "DOM"],
+    "types": [],
+    "paths": { "@react-native-async-storage/async-storage": ["./src/shims/async-storage.ts"] }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["src/shims/react.ts", "src/shims/react-dom-client.ts"]
+}

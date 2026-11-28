@@ -1,0 +1,13 @@
+{
+  "name": "sleek-admin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sleek admin console: a separate, staff-only web app with role-based access. Shares the Sleek rules layer (../src).",
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

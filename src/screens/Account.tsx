@@ -18,14 +18,22 @@ export default function Account({ children }: { children?: React.ReactNode }) {
   const t = useT();
   const lang = useStore((s) => s.settings.language ?? 'en');
   if (!user) return null;
-  const display = user.role === 'artisan' ? user.businessName ?? user.name : user.name;
-  const sub = user.role === 'artisan' ? `${user.accountType === 'individual' ? 'Artisan' : user.accountType === 'team' ? 'Team account' : 'Agency account'} · ${user.area}, ${user.city}` : user.role === 'customer' ? `${user.area}, ${user.city}` : 'Sleek Trust & Safety';
+  const display = user.role === 'artisan' ? user.businessName ?? user.name : user.role === 'seller' ? user.businessName : user.name;
+  const sub =
+    user.role === 'artisan'
+      ? `${user.accountType === 'individual' ? 'Artisan' : user.accountType === 'team' ? 'Team account' : 'Agency / enterprise'} · ${user.area}, ${user.city}`
+      : user.role === 'seller'
+        ? `Sleek Services seller · ${user.area}, ${user.city}`
+        : user.role === 'customer'
+          ? `${user.area}, ${user.city}`
+          : '';
+  const worker = user.role === 'customer' || user.role === 'artisan';
 
   return (
     <Screen title="Profile" back={false}>
       <Card>
         <Row gap={space.md}>
-          <Avatar name={display} color={user.role === 'artisan' ? user.avatarColor : undefined} size={60} />
+          <Avatar name={display} color={user.role === 'artisan' || user.role === 'seller' ? user.avatarColor : undefined} size={60} />
           <View style={{ flex: 1 }}>
             <Txt v="h2">{display}</Txt>
             <Txt v="small" muted>
@@ -48,11 +56,15 @@ export default function Account({ children }: { children?: React.ReactNode }) {
         <ListItem icon="notifications-outline" title="Notifications" subtitle={unread ? `${unread} unread` : 'All caught up'} onPress={() => router.push('/notifications')} />
         <ListItem icon="notifications-off-outline" title={t('settings.notifications')} subtitle="Choose what reaches your phone, quiet hours" onPress={() => router.push('/notification-settings')} />
         <ListItem icon="language-outline" title={t('settings.language')} subtitle={lang === 'pcm' ? 'Naija (Pidgin)' : 'English'} onPress={() => router.push('/settings')} />
-        {user.role !== 'admin' ? <ListItem icon="time-outline" title="Job history" subtitle="Completed, cancelled and disputed jobs" onPress={() => router.push('/history')} /> : null}
-        {user.role !== 'admin' ? <ListItem icon="flag-outline" title={t('dispute.centre')} subtitle="Open, follow and read decisions" onPress={() => router.push('/disputes')} /> : null}
-        {user.role !== 'admin' ? <ListItem icon="gift-outline" title="Refer & earn" subtitle="Invite friends and artisans" onPress={() => router.push('/referrals')} /> : null}
-        <ListItem icon="sparkles-outline" title="Ugent assistant" subtitle="Let Me AI’s agent book for you, with your confirmation" onPress={() => router.push('/ugent')} />
+        <ListItem icon="chatbubbles-outline" title="Support" subtitle="Chat with a real person at Sleek" onPress={() => router.push('/support')} />
+        {worker ? <ListItem icon="time-outline" title="Job history" subtitle="Completed, cancelled and disputed jobs" onPress={() => router.push('/history')} /> : null}
+        {worker ? <ListItem icon="flag-outline" title={t('dispute.centre')} subtitle="Open, follow and read decisions" onPress={() => router.push('/disputes')} /> : null}
+        {user.role === 'customer' ? <ListItem icon="receipt-outline" title="Sleek Services orders" subtitle="Track deliveries with your Sleek rider" onPress={() => router.push('/orders')} /> : null}
+        {worker ? <ListItem icon="gift-outline" title="Refer & earn" subtitle="Invite friends and artisans" onPress={() => router.push('/referrals')} /> : null}
+        {user.role === 'customer' ? <ListItem icon="sparkles-outline" title="Ugent assistant" subtitle="Let Me AI’s agent book for you, with your confirmation" onPress={() => router.push('/ugent')} /> : null}
+        <ListItem icon="pulse-outline" title="Connected providers (demo)" subtitle="Payments, identity, SMS, email, maps, storage" onPress={() => router.push('/providers')} />
         <ListItem icon="settings-outline" title="Settings & privacy" onPress={() => router.push('/settings')} />
+        <ListItem icon="document-text-outline" title="Policies & rules" subtitle="Privacy, fees, Sleek Hold and penalties" onPress={() => router.push('/policies')} />
         <ListItem icon="shield-checkmark-outline" title="Help & Safety Centre" subtitle="Safety tools, rules, trusted contact" onPress={() => router.push('/trust-safety')} />
         <ListItem icon="help-circle-outline" title="Help & Support" onPress={() => router.push('/help')} />
         <ListItem

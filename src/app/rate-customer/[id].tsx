@@ -9,7 +9,7 @@ import { space } from '../../theme';
 const ITEMS = [
   { key: 'professionalism', label: 'Professionalism', hint: 'Respectful, ready on time, safe to work with' },
   { key: 'clarity', label: 'Clear job description', hint: 'The job matched what was described' },
-  { key: 'payment', label: 'Payment behaviour', hint: 'Funded escrow promptly and approved fairly' },
+  { key: 'payment', label: 'Payment behaviour', hint: 'Funded Sleek Hold promptly and approved fairly' },
 ] as const;
 
 /** Two-way reviews: the artisan rates the customer. Improves matching for everyone. */

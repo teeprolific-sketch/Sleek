@@ -13,11 +13,12 @@ function requireAdmin(s: Session) {
 
 export async function verificationQueue(deps: Deps, s: Session) {
   requireAdmin(s);
-  const rows = await deps.db.query<{ data: Artisan }>("SELECT data FROM users WHERE role = 'artisan' AND data::text LIKE '%\"in_review\"%'");
+  const rows = await deps.db.query<{ data: Artisan }>("SELECT data FROM users WHERE role = 'artisan' AND (data::text LIKE '%\"in_review\"%' OR data::text LIKE '%\"postReview\": \"pending\"%' OR data::text LIKE '%\"postReview\":\"pending\"%')");
+  const waiting = (k: SkillVerification) => k.status === 'in_review' || (k.status === 'approved' && k.postReview === 'pending');
   const out: { artisanId: string; name: string; workerId?: string; workerName?: string; skill: SkillVerification; highRisk: boolean }[] = [];
   for (const { data: a } of rows) {
-    for (const k of a.skills) if (k.status === 'in_review') out.push({ artisanId: a.id, name: a.businessName ?? a.name, skill: k, highRisk: category(k.categoryId).risk === 'high' });
-    for (const w of a.workers) for (const k of w.skills) if (k.status === 'in_review') out.push({ artisanId: a.id, name: a.businessName ?? a.name, workerId: w.id, workerName: w.name, skill: k, highRisk: category(k.categoryId).risk === 'high' });
+    for (const k of a.skills) if (waiting(k)) out.push({ artisanId: a.id, name: a.businessName ?? a.name, skill: k, highRisk: category(k.categoryId).risk === 'high' });
+    for (const w of a.workers) for (const k of w.skills) if (waiting(k)) out.push({ artisanId: a.id, name: a.businessName ?? a.name, workerId: w.id, workerName: w.name, skill: k, highRisk: category(k.categoryId).risk === 'high' });
   }
   return out.sort((x, y) => (x.skill.submittedAt ?? '').localeCompare(y.skill.submittedAt ?? ''));
 }
@@ -31,8 +32,9 @@ export async function reviewSkill(deps: Deps, s: Session, i: { artisanId: string
     const a = await getArtisan(deps, i.artisanId, c, true);
     const list = i.workerId ? a.workers.find((w) => w.id === i.workerId)?.skills : a.skills;
     const k = list?.find((x) => x.categoryId === i.categoryId);
-    if (!k || k.status !== 'in_review') throw notFound('No skill video waiting for review.');
-    Object.assign(k, { status: i.decision, qualityScore: i.decision === 'approved' ? Math.min(5, Math.max(1, i.quality ?? 4)) : undefined, reviewerNote: i.note.trim() || undefined, decidedAt: iso(deps), certificateProvided: k.certificateRequired ? !!i.certificateChecked : undefined });
+    const isAudit = k?.status === "approved" && k.postReview === "pending";
+    if (!k || (k.status !== "in_review" && !isAudit)) throw notFound('No skill video waiting for review.');
+    Object.assign(k, { postReview: i.decision === 'approved' ? 'confirmed' : 'revoked', status: i.decision, qualityScore: i.decision === 'approved' ? Math.min(5, Math.max(1, i.quality ?? 4)) : undefined, reviewerNote: i.note.trim() || undefined, decidedAt: iso(deps), certificateProvided: k.certificateRequired ? !!i.certificateChecked : undefined });
     await saveUser(deps, a, c);
     const msg = { approved: `You are now verified for ${cat.name}.`, rejected: `Your ${cat.name} video was not approved. ${i.note}`, needs_more: `We need another ${cat.name} video. ${i.note}` }[i.decision];
     await notify(deps, a.id, i.decision === 'approved' ? 'Skill verified' : 'Skill review update', msg, '/verify', c);

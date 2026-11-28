@@ -12,8 +12,9 @@ import type { CancellationRecord, Escrow, Job, JobSize, JobStatus } from './type
  *   requested ─(artisan declines)→ declined
  */
 
-export const COMMISSION_RATE = 0.1; // 10% standard
-export const TRUSTED_COMMISSION_RATE = 0.08; // Trusted artisans pay less
+export const COMMISSION_RATE = 0.2; // Sleek commission: 20% of the artisan side
+/** Kept for API compatibility: Trusted artisans pay the same 20%. */
+export const TRUSTED_COMMISSION_RATE = COMMISSION_RATE;
 
 export const AUTO_RELEASE_HOURS: Record<JobSize, number> = {
   short: 24,
@@ -69,8 +70,8 @@ export function autoReleaseAt(submittedAt: string, size: JobSize): string {
   return new Date(new Date(submittedAt).getTime() + AUTO_RELEASE_HOURS[size] * HOUR).toISOString();
 }
 
-export function commissionFor(amount: number, trusted: boolean): { commission: number; payout: number } {
-  const rate = trusted ? TRUSTED_COMMISSION_RATE : COMMISSION_RATE;
+export function commissionFor(amount: number, trusted: boolean, rateOverride?: number): { commission: number; payout: number } {
+  const rate = rateOverride ?? (trusted ? TRUSTED_COMMISSION_RATE : COMMISSION_RATE);
   const commission = Math.round(amount * rate);
   return { commission, payout: amount - commission };
 }
@@ -86,7 +87,7 @@ export function canFund(job: Job): boolean {
 }
 
 export function fundEscrow(job: Job, paymentRef: string, at: string): Escrow {
-  if (!canFund(job)) throw new EscrowRuleError('Agree a price in the Price Pool before paying into escrow.');
+  if (!canFund(job)) throw new EscrowRuleError('Agree a price in the Price Pool before paying into Sleek Hold.');
   return { state: 'held', amount: job.pricePool.locked!.amount, fundedAt: at, paymentRef };
 }
 
@@ -107,9 +108,9 @@ export function canDispute(job: Job): boolean {
   return (job.status === 'in_progress' || job.status === 'proof_submitted' || job.status === 'funded') && job.escrow.state === 'held';
 }
 
-export function release(escrow: Escrow, trusted: boolean, reason: NonNullable<Escrow['releaseReason']>, at: string): Escrow {
+export function release(escrow: Escrow, trusted: boolean, reason: NonNullable<Escrow['releaseReason']>, at: string, rate?: number): Escrow {
   if (escrow.state !== 'held' && escrow.state !== 'frozen') throw new EscrowRuleError('No funds are held for this job.');
-  const { commission, payout } = commissionFor(escrow.amount, trusted);
+  const { commission, payout } = commissionFor(escrow.amount, trusted, rate);
   return { ...escrow, state: 'released', releasedAt: at, commission, releasedToArtisan: payout, releaseReason: reason, refundedToCustomer: 0 };
 }
 
@@ -192,11 +193,11 @@ export function applyCancellation(job: Job, by: 'customer' | 'artisan' | 'admin'
 }
 
 /** Resolve a dispute: artisanShare is the fraction of escrow paid to the artisan (commission applies to that part). */
-export function resolveDisputeEscrow(escrow: Escrow, artisanShare: number, trusted: boolean, at: string): Escrow {
+export function resolveDisputeEscrow(escrow: Escrow, artisanShare: number, trusted: boolean, at: string, rate?: number): Escrow {
   if (escrow.state !== 'frozen' && escrow.state !== 'held') throw new EscrowRuleError('No funds are held for this job.');
   const share = Math.min(1, Math.max(0, artisanShare));
   const gross = Math.round(escrow.amount * share);
-  const { commission, payout } = commissionFor(gross, trusted);
+  const { commission, payout } = commissionFor(gross, trusted, rate);
   const refund = escrow.amount - gross;
   return {
     ...escrow,

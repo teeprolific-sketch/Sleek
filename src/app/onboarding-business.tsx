@@ -28,6 +28,7 @@ export default function BusinessOnboarding() {
   const [cac, setCac] = useState(me?.business?.cacNumber ?? '');
   const [areas, setAreas] = useState<string[]>(me?.business?.serviceAreas ?? (me ? [me.area] : []));
   const [size, setSize] = useState(me?.business?.teamSize ?? 3);
+  const [notRegistered, setNotRegistered] = useState(!!me?.business?.cacPending);
   if (!me || me.accountType === 'individual') return <Screen title="Business setup">{<Txt>For Team and Agency accounts.</Txt>}</Screen>;
   const isAgency = me.accountType === 'agency';
   const verified = identityVerified(me.identity);
@@ -36,12 +37,12 @@ export default function BusinessOnboarding() {
   const cityAreas = AREAS[me.city] ?? [me.area];
 
   const finish = () => {
-    const r = complete({ cacNumber: cac.trim() || undefined, serviceAreas: areas, teamSize: size, completedOnboarding: true });
+    const r = complete({ cacNumber: notRegistered ? undefined : cac.trim() || undefined, cacPending: notRegistered, serviceAreas: areas, teamSize: size, completedOnboarding: true });
     if (!r.ok) {
       setStep(0);
       return showMessage('Check your business details', r.error);
     }
-    router.replace('/dashboard');
+    router.replace('/verify');
   };
 
   return (
@@ -53,7 +54,11 @@ export default function BusinessOnboarding() {
         {step === 0 ? (
           <>
             <Txt v="h2">Business details</Txt>
-            <Field label={isAgency ? 'CAC registration number (required)' : 'CAC registration number (optional)'} placeholder="e.g. RC 1234567 or BN 1234567" value={cac} onChangeText={setCac} autoCapitalize="characters" />
+            {!notRegistered ? <Field label="CAC registration number" placeholder="e.g. RC 1234567 or BN 1234567" value={cac} onChangeText={setCac} autoCapitalize="characters" hint="We check it against the CAC register." /> : null}
+            <Row gap={8} style={{ marginBottom: space.md }}>
+              <Chip label="Not registered with CAC yet" icon={notRegistered ? 'checkbox' : 'square-outline'} selected={notRegistered} onPress={() => setNotRegistered(!notRegistered)} />
+            </Row>
+            {notRegistered ? <Banner tone="warning" icon="alert-circle-outline" body="You can still apply. Sleek needs your CAC registration, so the account is flagged for review and job volume may be limited until you add it." /> : null}
             <Txt v="small" style={{ fontWeight: '600', marginBottom: 6 }}>
               Areas you serve in {me.city}
             </Txt>
@@ -70,7 +75,7 @@ export default function BusinessOnboarding() {
                 <Chip key={n} label={n === 50 ? '50+' : String(n)} selected={size === n} onPress={() => setSize(n)} />
               ))}
             </Row>
-            <Button title="Continue" style={{ marginTop: space.xl }} disabled={!areas.length || (isAgency && !cac.trim())} onPress={() => setStep(1)} />
+            <Button title="Continue" style={{ marginTop: space.xl }} disabled={!areas.length || (!notRegistered && !cac.trim())} onPress={() => setStep(1)} />
           </>
         ) : null}
         {step === 1 ? (

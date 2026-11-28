@@ -55,8 +55,8 @@ async function summarise(deps: Deps, s: Session, name: UgentActionName, a: Args)
       if (!Number.isInteger(a.amount)) throw badRequest('amount must be a whole Naira amount.');
       return `Offer ₦${Number(a.amount).toLocaleString('en-NG')} for “${job.title}”.`;
     case 'request_escrow_funding':
-      if (job.status !== 'price_agreed') throw ruleViolation('The price must be locked before paying into escrow.');
-      return `Pay ₦${job.pricePool.locked!.amount.toLocaleString('en-NG')} into Sleek Escrow for “${job.title}”. You complete payment yourself in Sleek.`;
+      if (job.status !== 'price_agreed') throw ruleViolation('The price must be locked before paying into Sleek Hold.');
+      return `Pay ₦${job.pricePool.locked!.amount.toLocaleString('en-NG')} into Sleek Hold for “${job.title}”. You complete payment yourself in Sleek.`;
     case 'approve_job_completion':
       return `Approve the work on “${job.title}” and release ₦${job.escrow.amount.toLocaleString('en-NG')} to the artisan.`;
     case 'cancel_job':

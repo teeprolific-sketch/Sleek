@@ -188,6 +188,9 @@ export async function submitSkillVideo(deps: Deps, s: Session, i: { categoryId: 
     submittedAt: iso(deps),
     reviewerNote: ok ? undefined : check.problems.join(' '),
     certificateRequired: cat.risk === 'high',
+    decidedAt: ok ? iso(deps) : undefined,
+    // Live immediately; the Trust team audits it afterwards and can revoke it.
+    postReview: ok ? 'pending' : undefined,
   };
   await mutate(deps, s, (a) => {
     const id = identityOf(a, i.workerId);

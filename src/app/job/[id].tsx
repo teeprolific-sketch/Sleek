@@ -10,6 +10,8 @@ import { category } from '../../data/categories';
 import { freeWorkersFor } from '../../domain/availability';
 import { customerBadge, customerScore } from '../../domain/customerRating';
 import { canStart, isLocationDisclosed, quoteCancellation } from '../../domain/escrow';
+import { ContactCard } from '../../components/ContactCard';
+import { FEE_LABEL } from '../../domain/fees';
 import { canRequestExtension, EXTENSION_OPTIONS_MIN, pendingExtension } from '../../domain/extensions';
 import { PROTECTION_DAYS, protectionCover, protectionEligible, protectionWindow } from '../../domain/protection';
 import { canMarkEnRoute } from '../../domain/timeline';
@@ -30,7 +32,7 @@ export default function JobDetail() {
   const customer = useStore((s) => s.customers.find((x) => x.id === job?.customerId));
   const jobs = useStore((s) => s.jobs);
   const actions = useStore(
-    useShallow((s) => ({ startJob: s.startJob, cancelJob: s.cancelJob, declineJob: s.declineJob, assignWorker: s.assignWorker, markEnRoute: s.markEnRoute, requestExtension: s.requestExtension, decideExtension: s.decideExtension })),
+    useShallow((s) => ({ startJob: s.startJob, cancelJob: s.cancelJob, declineJob: s.declineJob, assignWorker: s.assignWorker, markEnRoute: s.markEnRoute, requestExtension: s.requestExtension, decideExtension: s.decideExtension, markInspected: s.markInspected })),
   );
   const [reason, setReason] = useState('');
   const [showCancel, setShowCancel] = useState(false);
@@ -87,7 +89,7 @@ export default function JobDetail() {
       {/* Primary next action */}
       <View style={{ marginTop: space.lg, gap: space.sm }}>
         {job.status === 'proof_submitted' ? <AutoReleaseCountdown job={job} /> : null}
-        {party === 'customer' && job.status === 'price_agreed' ? <Button title={`Pay ${naira(job.pricePool.locked!.amount)} into escrow`} icon="lock-closed" onPress={() => router.push({ pathname: '/escrow/[id]', params: { id: job.id } })} /> : null}
+        {party === 'customer' && job.status === 'price_agreed' ? <Button title={`Pay ${naira(job.pricePool.locked!.amount)} into Sleek Hold`} icon="lock-closed" onPress={() => router.push({ pathname: '/escrow/[id]', params: { id: job.id } })} /> : null}
         {party === 'customer' && job.status === 'proof_submitted' ? <Button title="Review proof of work" icon="images-outline" onPress={() => router.push({ pathname: '/proof/[id]', params: { id: job.id } })} /> : null}
         {party === 'customer' && closed && job.status !== 'declined' && !job.reviewId && job.status !== 'cancelled' ? <Button title="Rate this job" icon="star-outline" onPress={() => router.push({ pathname: '/review/[id]', params: { id: job.id } })} /> : null}
         {party === 'artisan' && job.status === 'funded' && !job.enRouteAt ? (
@@ -99,9 +101,21 @@ export default function JobDetail() {
         {party === 'artisan' && job.status === 'in_progress' ? <Button title="Upload proof of work" icon="cloud-upload-outline" onPress={() => router.push({ pathname: '/proof-upload/[id]', params: { id: job.id } })} /> : null}
         {party === 'artisan' && closed && job.status !== 'declined' && job.status !== 'cancelled' && !job.customerReviewId ? <Button variant="secondary" title="Rate this customer" icon="person-outline" onPress={() => router.push({ pathname: '/rate-customer/[id]', params: { id: job.id } })} /> : null}
         {job.status === 'disputed' || job.disputeId ? <Button variant="secondary" title="View dispute" icon="flag-outline" onPress={() => router.push({ pathname: '/dispute/[id]', params: { id: job.id } })} /> : null}
+        {party === 'customer' && job.fee?.status === 'unpaid' && job.status === 'requested' ? <Button title={`Pay ${FEE_LABEL[job.fee.type].toLowerCase()} · ${naira(job.fee.amount)}`} icon="cash-outline" onPress={() => router.push({ pathname: '/fee/[id]', params: { id: job.id } })} /> : null}
+        {party === 'artisan' && job.fee?.type === 'inspection' && job.fee.status === 'held' ? <Button title="Inspection done" icon="search-outline" onPress={() => run(actions.markInspected(job.id))} /> : null}
         <Button variant="ghost" title="Open chat" icon="chatbubbles-outline" onPress={() => router.push({ pathname: '/chat/[id]', params: { id: job.id } })} />
+        <Button variant="ghost" title="Get help with this job" icon="help-buoy-outline" onPress={() => router.push({ pathname: '/support/new', params: { jobId: job.id, category: 'job' } })} />
         {party === 'customer' && closed ? <Button variant="ghost" title={`Book ${artisan.businessName ?? artisan.name.split(' ')[0]} again`} icon="repeat-outline" onPress={() => rebook(job)} /> : null}
       </View>
+
+      {!['cancelled', 'declined'].includes(job.status) ? (
+        <ContactCard
+          unlocked={disclosed}
+          who={party === 'customer' ? (worker ? 'Your worker' : 'Your artisan') : 'Customer'}
+          name={party === 'customer' ? worker?.name ?? artisan.businessName ?? artisan.name : customer.name}
+          phone={party === 'customer' ? artisan.phone : customer.phone}
+        />
+      ) : null}
 
       {/* More time: artisan asks, customer decides */}
       {pendingExt ? (
@@ -224,7 +238,8 @@ export default function JobDetail() {
           )}
           {worker ? <KeyValue k="Assigned worker" v={worker.name} /> : null}
           <KeyValue k="Price" v={job.pricePool.locked ? `${naira(job.pricePool.locked.amount)} (locked)` : 'Negotiating in chat'} />
-          <KeyValue k="Escrow" v={escrowLabel(job)} />
+          <KeyValue k="Sleek Hold" v={escrowLabel(job)} />
+          {job.fee ? <KeyValue k={FEE_LABEL[job.fee.type]} v={`${naira(job.fee.amount)} · ${job.fee.status === 'unpaid' ? 'not paid' : job.fee.status === 'held' ? 'in Sleek Hold' : job.fee.status === 'released' ? `released (${naira(job.fee.toArtisan ?? 0)} to artisan)` : 'refunded'}`} /> : null}
           <Divider />
           <Txt v="small" muted>
             Location
@@ -358,7 +373,7 @@ function escrowLabel(job: Job): string {
   const e = job.escrow;
   switch (e.state) {
     case 'none':
-      return 'Not funded';
+      return 'Not paid yet';
     case 'held':
       return `${naira(e.amount)} held`;
     case 'frozen':

@@ -39,9 +39,9 @@ export const UGENT_TOOLS: ToolDef[] = [
     },
   },
   { name: 'propose_price', description: 'Propose or counter a price in the job Price Pool. REQUIRES USER CONFIRMATION.', input_schema: { type: 'object', properties: { job_id: { type: 'string' }, amount: { type: 'number' } }, required: ['job_id', 'amount'] } },
-  { name: 'request_escrow_funding', description: 'Ask the user to pay the locked price into escrow. The user completes payment in Sleek; Ugent never handles payment details.', input_schema: { type: 'object', properties: { job_id: { type: 'string' } }, required: ['job_id'] } },
-  { name: 'approve_job_completion', description: 'Approve proof of work and release escrow. REQUIRES USER CONFIRMATION.', input_schema: { type: 'object', properties: { job_id: { type: 'string' } }, required: ['job_id'] } },
+  { name: 'request_escrow_funding', description: 'Ask the user to pay the locked price into Sleek Hold. The user completes payment in Sleek; Ugent never handles payment details.', input_schema: { type: 'object', properties: { job_id: { type: 'string' } }, required: ['job_id'] } },
+  { name: 'approve_job_completion', description: 'Approve proof of work and release Sleek Hold. REQUIRES USER CONFIRMATION.', input_schema: { type: 'object', properties: { job_id: { type: 'string' } }, required: ['job_id'] } },
   { name: 'cancel_job', description: 'Cancel a job before work starts (refund per policy). REQUIRES USER CONFIRMATION.', input_schema: { type: 'object', properties: { job_id: { type: 'string' }, reason: { type: 'string' } }, required: ['job_id', 'reason'] } },
-  { name: 'get_job_status', description: 'Status, escrow state, time window and the next step for a job.', input_schema: { type: 'object', properties: { job_id: { type: 'string' } }, required: ['job_id'] } },
+  { name: 'get_job_status', description: 'Status, Sleek Hold state, time window and the next step for a job.', input_schema: { type: 'object', properties: { job_id: { type: 'string' } }, required: ['job_id'] } },
   { name: 'list_my_jobs', description: 'The user’s jobs with status.', input_schema: { type: 'object', properties: { active_only: { type: 'boolean' } } } },
 ];

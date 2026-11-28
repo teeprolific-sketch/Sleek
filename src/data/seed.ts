@@ -1,5 +1,7 @@
 import { emptyPool } from '../domain/pricePool';
 import type {
+  Rider,
+  Seller,
   Admin,
   Artisan,
   ArtisanAccountType,
@@ -202,6 +204,33 @@ export function seedCustomers(): Customer[] {
         { label: 'Home', line1: '14 Alagomeji Street', area: 'Yaba', city: 'Lagos', state: 'Lagos', landmark: 'Opposite the pharmacy' },
         { label: 'Office', line1: '3 Herbert Macaulay Way', area: 'Yaba', city: 'Lagos', state: 'Lagos' },
       ],
+      email: 'amaka.johnson@example.com',
+      identity: { nin: 'passed', ninLast4: '4821', liveness: 'not_started', faceMatch: 'not_started', verifiedAt: iso(Date.now() - 59 * DAY), ninHash: 'demo-amaka' },
+      authProvider: 'google',
+    },
+    {
+      id: 'cus_tobi',
+      role: 'customer',
+      name: 'Tobi Adeleke',
+      phone: '+2348000000301',
+      area: 'Surulere',
+      city: 'Lagos',
+      joinedAt: iso(Date.now() - 41 * DAY),
+      credit: 0,
+      addresses: [{ label: 'Home', line1: '22 Adeniran Ogunsanya Street', area: 'Surulere', city: 'Lagos', state: 'Lagos' }],
+      email: 'tobi.adeleke@example.com',
+      identity: { nin: 'passed', ninLast4: '7730', liveness: 'not_started', faceMatch: 'not_started', verifiedAt: iso(Date.now() - 40 * DAY), ninHash: 'demo-tobi' },
+    },
+    {
+      id: 'cus_ngozi',
+      role: 'customer',
+      name: 'Ngozi Okeke',
+      phone: '+2348000000302',
+      area: 'Lekki',
+      city: 'Lagos',
+      joinedAt: iso(Date.now() - 18 * DAY),
+      credit: 0,
+      addresses: [{ label: 'Home', line1: '5 Admiralty Way', area: 'Lekki', city: 'Lagos', state: 'Lagos', landmark: 'Lekki Phase 1' }],
     },
   ];
 }
@@ -211,7 +240,7 @@ export const SEED_ADMIN: Admin = { id: DEMO_ADMIN_ID, role: 'admin', name: 'Slee
 const REVIEW_TEXT = [
   'Came on time and explained the problem clearly. Fixed it properly.',
   'Very neat work. I will book again.',
-  'Professional and polite. The escrow made me feel safe.',
+  'Professional and polite. Sleek Hold made me feel safe.',
   'Good job, a little late but kept me informed in the chat.',
   'Excellent! Exactly what I asked for.',
   'Fair price and quality work.',
@@ -266,7 +295,7 @@ export function seedJobs(customer: Customer): { jobs: Job[]; messages: ChatMessa
     origin: 'app',
   };
   const messages: ChatMessage[] = [
-    { id: 'msg_d1', jobId: ac.id, from: 'system', kind: 'system', text: 'Chat is protected by Sleek. Phone numbers, emails and off-app contact are blocked. Your address is shared only after you fund escrow.', at: iso(now - 4 * 3_600_000) },
+    { id: 'msg_d1', jobId: ac.id, from: 'system', kind: 'system', text: 'Chat is protected by Sleek. Phone numbers, emails and off-app contact are blocked. Your address is shared only after you pay into Sleek Hold.', at: iso(now - 4 * 3_600_000) },
     { id: 'msg_d2', jobId: ac.id, from: 'customer', kind: 'text', text: 'Good afternoon. My bedroom AC is blowing warm air. Can you come on the date I picked?', at: iso(now - 4 * 3_600_000 + 60_000) },
     { id: 'msg_d3', jobId: ac.id, from: 'artisan', kind: 'text', text: 'Good afternoon ma. Yes I can. It is likely low gas or a dirty coil. I will service it and check the gas.', at: iso(now - 3_700_000) },
     { id: 'msg_d4', jobId: ac.id, from: 'artisan', kind: 'price', text: 'Proposed ₦18,000', at: iso(now - 3_600_000), offerId: 'off_demo_1' },
@@ -288,7 +317,7 @@ export function seedJobs(customer: Customer): { jobs: Job[]; messages: ChatMessa
       size: 'short',
       status: 'completed',
       pricePool: { offers: [{ id: `${id}_o`, by: 'artisan', amount, at: iso(st.getTime() - DAY), status: 'accepted' }], locked: { amount, lockedAt: iso(st.getTime() - DAY), offerId: `${id}_o` } },
-      escrow: { state: 'released', amount, fundedAt: iso(st.getTime() - DAY), paymentRef: `ESC_${id}`, releasedAt: iso(en.getTime() + 3_600_000), releasedToArtisan: Math.round(amount * 0.92), commission: Math.round(amount * 0.08), refundedToCustomer: 0, releaseReason: 'customer_approved' },
+      escrow: { state: 'released', amount, fundedAt: iso(st.getTime() - DAY), paymentRef: `ESC_${id}`, releasedAt: iso(en.getTime() + 3_600_000), releasedToArtisan: Math.round(amount * 0.8), commission: Math.round(amount * 0.2), refundedToCustomer: 0, releaseReason: 'customer_approved' },
       issuePhotos: [],
       createdAt: iso(st.getTime() - 2 * DAY),
       updatedAt: iso(en.getTime()),
@@ -314,7 +343,7 @@ export function seedJobs(customer: Customer): { jobs: Job[]; messages: ChatMessa
     past('job_hist_wardrobe', 'art_kelechi', 'carpenter', 'Wardrobe door rehang', 55, 24000, {
       status: 'resolved',
       disputeId: 'dsp_hist_wardrobe',
-      escrow: { state: 'partially_refunded', amount: 24000, fundedAt: iso(now - 56 * DAY), releasedAt: iso(now - 52 * DAY), releasedToArtisan: 11040, commission: 960, refundedToCustomer: 12000, releaseReason: 'dispute_resolution' },
+      escrow: { state: 'partially_refunded', amount: 24000, fundedAt: iso(now - 56 * DAY), releasedAt: iso(now - 52 * DAY), releasedToArtisan: 9600, commission: 2400, refundedToCustomer: 12000, releaseReason: 'dispute_resolution' },
     }),
   ];
   const up = new Date(now + DAY);
@@ -328,7 +357,7 @@ export function seedJobs(customer: Customer): { jobs: Job[]; messages: ChatMessa
     startedAt: undefined,
     proof: undefined,
   };
-  messages.push({ id: 'msg_up1', jobId: upcoming.id, from: 'system', kind: 'system', text: 'Escrow funded: ₦25,000 is held safely by Sleek. The job address is now shared with the artisan.', at: iso(now - 3_600_000) });
+  messages.push({ id: 'msg_up1', jobId: upcoming.id, from: 'system', kind: 'system', text: 'Paid into Sleek Hold: ₦25,000 is held safely by Sleek. The job address is now shared with the artisan.', at: iso(now - 3_600_000) });
   return { jobs: [ac, upcoming, ...history], messages };
 }
 
@@ -390,3 +419,64 @@ export const SERVICE_ITEMS: ServiceItem[] = [
 export function serviceItem(id: string): ServiceItem | undefined {
   return SERVICE_ITEMS.find((x) => x.id === id);
 }
+
+// ---------------------------------------------------------------------------
+// Sleek Services sellers and riders
+// ---------------------------------------------------------------------------
+
+export const DEMO_SELLER_ID = 'sel_ladipo';
+
+const SELLER_OWNERS: Record<string, { name: string; phone: string; email: string }> = {
+  'Ladipo Spares': { name: 'Chidi Okafor', phone: '+2348000000004', email: 'chidi@ladipospares.ng' },
+  'Alaba Tools Hub': { name: 'Emeka Nwosu', phone: '+2348000000101', email: 'sales@alabatools.ng' },
+  'Coleman Direct': { name: 'Bisi Adeyemi', phone: '+2348000000102', email: 'bisi@colemandirect.ng' },
+  'Dulux Partner Store': { name: 'Kemi Lawal', phone: '+2348000000103', email: 'kemi@paintpartner.ng' },
+  PlumbMart: { name: 'Yusuf Bello', phone: '+2348000000104', email: 'yusuf@plumbmart.ng' },
+  'CleanCo Supplies': { name: 'Ngozi Eze', phone: '+2348000000105', email: 'ngozi@cleanco.ng' },
+  'Balogun Market Partners': { name: 'Funmi Ajayi', phone: '+2348000000106', email: 'funmi@balogunpartners.ng' },
+  TileWorld: { name: 'Segun Ojo', phone: '+2348000000107', email: 'segun@tileworld.ng' },
+  'CoolAir Parts': { name: 'Ibrahim Musa', phone: '+2348000000108', email: 'ibrahim@coolair.ng' },
+  'Sleek Mobility': { name: 'Tayo Bankole', phone: '+2348000000109', email: 'fleet@sleekmobility.ng' },
+  'PowerHire NG': { name: 'Dayo Coker', phone: '+2348000000110', email: 'dayo@powerhire.ng' },
+  'Owambe Rentals': { name: 'Bukola Oni', phone: '+2348000000111', email: 'bookings@owambe.ng' },
+  StageCraft: { name: 'Uche Obi', phone: '+2348000000112', email: 'uche@stagecraft.ng' },
+  'LensHire Lagos': { name: 'Ada Nnaji', phone: '+2348000000113', email: 'ada@lenshire.ng' },
+  SoundBox: { name: 'Tobi Ilesanmi', phone: '+2348000000114', email: 'tobi@soundbox.ng' },
+  BuildHire: { name: 'Gbenga Ayo', phone: '+2348000000115', email: 'gbenga@buildhire.ng' },
+};
+
+export const sellerIdFor = (vendor: string) => (vendor === 'Ladipo Spares' ? DEMO_SELLER_ID : `sel_${vendor.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')}`);
+
+export function seedSellers(): Seller[] {
+  const vendors = [...new Set(SERVICE_ITEMS.map((i) => i.vendor))];
+  return vendors.map((v, i) => {
+    const area = SERVICE_ITEMS.find((x) => x.vendor === v)!.vendorArea;
+    const o = SELLER_OWNERS[v] ?? { name: 'Sleek Seller', phone: `+234800000${String(200 + i).padStart(4, '0')}`, email: 'seller@example.ng' };
+    return {
+      id: sellerIdFor(v),
+      role: 'seller',
+      name: o.name,
+      businessName: v,
+      phone: o.phone,
+      email: o.email,
+      area: area.split(',')[0],
+      city: 'Lagos',
+      joinedAt: new Date(Date.now() - (60 + i * 9) * 86_400_000).toISOString(),
+      identity: { nin: 'passed', ninLast4: String(4100 + i * 7).slice(-4), liveness: 'passed', faceMatch: 'passed', faceMatchScore: 0.9 + (i % 5) / 100, verifiedAt: new Date(Date.now() - (58 + i * 9) * 86_400_000).toISOString(), postReview: 'confirmed' },
+      cacNumber: `RC ${1203400 + i * 311}`,
+      storeLive: true,
+      avatarColor: ['#0EA5E9', '#0284C7', '#0B3D91', '#0369A1'][i % 4],
+      payoutAccount: { bankName: ['GTBank', 'Access Bank', 'Zenith Bank', 'UBA'][i % 4], accountNumberLast4: String(3000 + i * 13).slice(-4), accountName: o.name, verified: true },
+    } satisfies Seller;
+  });
+}
+
+export function seedProducts(): ServiceItem[] {
+  return SERVICE_ITEMS.map((i) => ({ ...i, sellerId: sellerIdFor(i.vendor), status: 'live' as const }));
+}
+
+export const RIDERS: Rider[] = [
+  { id: 'rd_musa', name: 'Musa Abdullahi', phone: '+2348000000201', bike: 'Bajaj Boxer', plate: 'LSR 412 KJ', rating: 4.9 },
+  { id: 'rd_kunle', name: 'Kunle Adebayo', phone: '+2348000000202', bike: 'TVS HLX', plate: 'KJA 228 EP', rating: 4.8 },
+  { id: 'rd_ifeanyi', name: 'Ifeanyi Okoro', phone: '+2348000000203', bike: 'Honda Ace', plate: 'APP 905 XY', rating: 4.7 },
+];

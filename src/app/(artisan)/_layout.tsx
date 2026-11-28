@@ -8,7 +8,9 @@ export default function ArtisanTabs() {
   const t = useT();
   const role = useStore((s) => s.session.role);
   const requests = useStore((s) => s.jobs.filter((j) => j.artisanId === s.session.userId && j.status === 'requested').length);
+  const active = useStore((s) => !!s.artisans.find((a) => a.id === s.session.userId)?.activatedAt);
   if (role !== 'artisan') return <Redirect href="/" />;
+  if (!active) return <Redirect href="/verify" />;
   return (
     <ThemedTabs
       tabs={[

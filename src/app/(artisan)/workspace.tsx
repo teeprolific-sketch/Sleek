@@ -18,6 +18,7 @@ export default function ArtisanWorkspace() {
         <ListItem icon="stats-chart-outline" title="Performance insights" subtitle="Acceptance, completion, rating trends" onPress={() => router.push('/insights')} />
         <ListItem icon="calendar-outline" title="Payout settings" subtitle="Bank or wallet, payout schedule" onPress={() => router.push('/payout-settings')} />
         {me.accountType !== 'individual' ? <ListItem icon="business-outline" title="Business details" subtitle={me.business?.completedOnboarding ? 'CAC, service areas, team size' : 'Setup not finished'} onPress={() => router.push('/onboarding-business')} /> : null}
+        <ListItem icon="cash-outline" title="Upfront fees" subtitle="Booking, consultancy or inspection fee per trade" onPress={() => router.push('/fees')} />
         <ListItem icon="card-outline" title="Payout account" subtitle={me.payoutAccount ? `${me.payoutAccount.bankName} ••${me.payoutAccount.accountNumberLast4}` : 'Not set'} onPress={() => router.push('/payout-account')} />
         <ListItem icon="cube-outline" title="Sleek Services" subtitle="Tools, materials & rentals at partner prices" onPress={() => router.push('/shop')} />
         <ListItem icon="receipt-outline" title="My orders" onPress={() => router.push('/orders')} />

@@ -60,7 +60,7 @@ export default function SkillVideo() {
       setResult(null);
       return;
     }
-    showMessage('Video submitted', cat.risk === 'high' ? `${cat.name} is a high-risk trade. A reviewer will check your video and may ask for a certificate.` : 'A reviewer will check your video, usually within 24 hours.');
+    showMessage(`${cat.name} verified ✓`, `Your video passed every check. You can take ${cat.name} jobs now. We’ve emailed you a confirmation, and the Trust team will audit it shortly.`);
     router.replace({ pathname: '/verify', params: workerId ? { workerId } : {} });
   };
 

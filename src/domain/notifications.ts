@@ -6,24 +6,24 @@ export interface CategoryInfo {
   description: string;
   /** Safety & money-critical: can't be switched off. */
   locked?: boolean;
-  roles: ('customer' | 'artisan' | 'admin')[];
+  roles: ('customer' | 'artisan' | 'seller' | 'admin')[];
 }
 
 export const NOTIFICATION_CATEGORIES: CategoryInfo[] = [
   { key: 'job_requests', label: 'New job requests', description: 'When a customer requests you', roles: ['artisan'] },
   { key: 'price_offers', label: 'Price offers', description: 'New offers and counter-offers in the Price Pool', roles: ['customer', 'artisan'] },
-  { key: 'escrow', label: 'Escrow & payments in', description: 'Escrow funded, refunds', locked: true, roles: ['customer', 'artisan'] },
+  { key: 'escrow', label: 'Sleek Hold & payments in', description: 'Paid into Sleek Hold, refunds', locked: true, roles: ['customer', 'artisan'] },
   { key: 'job_progress', label: 'Job progress', description: 'On the way, started, more time requested', roles: ['customer', 'artisan'] },
   { key: 'proof', label: 'Proof submitted', description: 'Work is ready for your approval', locked: true, roles: ['customer'] },
-  { key: 'payments', label: 'Payment released & payouts', description: 'Money released, payouts, tips', locked: true, roles: ['customer', 'artisan'] },
+  { key: 'payments', label: 'Payment released & payouts', description: 'Money released, payouts, tips', locked: true, roles: ['customer', 'artisan', 'seller'] },
   { key: 'disputes', label: 'Disputes', description: 'Updates and Sleek’s decisions', locked: true, roles: ['customer', 'artisan', 'admin'] },
-  { key: 'safety', label: 'Safety alerts', description: 'Emergency and safety messages', locked: true, roles: ['customer', 'artisan', 'admin'] },
+  { key: 'safety', label: 'Safety alerts', description: 'Emergency and safety messages', locked: true, roles: ['customer', 'artisan', 'admin', 'seller'] },
   { key: 'reviews', label: 'Reviews', description: 'New ratings and reviews', roles: ['customer', 'artisan'] },
-  { key: 'verification', label: 'Verification', description: 'Identity and skill review results', roles: ['artisan', 'admin'] },
-  { key: 'orders', label: 'Sleek Services orders', description: 'Order and delivery updates', roles: ['customer', 'artisan'] },
+  { key: 'verification', label: 'Verification', description: 'Identity and skill review results', roles: ['artisan', 'admin', 'seller'] },
+  { key: 'orders', label: 'Sleek Services orders', description: 'Order and delivery updates', roles: ['customer', 'artisan', 'seller'] },
   { key: 'referrals', label: 'Referrals & rewards', description: 'When friends join and you earn', roles: ['customer', 'artisan'] },
-  { key: 'promotions', label: 'Tips & offers', description: 'Occasional discounts and product news', roles: ['customer', 'artisan'] },
-  { key: 'system', label: 'Account & security', description: 'Sign-ins and important account changes', locked: true, roles: ['customer', 'artisan', 'admin'] },
+  { key: 'promotions', label: 'Tips & offers', description: 'Occasional discounts and product news', roles: ['customer', 'artisan', 'seller'] },
+  { key: 'system', label: 'Account & security', description: 'Sign-ins and important account changes', locked: true, roles: ['customer', 'artisan', 'admin', 'seller'] },
 ];
 
 export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = { enabled: { promotions: false }, quietHours: { enabled: false, start: 22, end: 7 } };
@@ -49,7 +49,7 @@ export function categoryFromLink(link?: string, title = ''): NotificationCategor
   if (t.includes('safety') || t.includes('sos')) return 'safety';
   if (t.includes('dispute')) return 'disputes';
   if (t.includes('offer') || t.includes('price')) return 'price_offers';
-  if (t.includes('escrow') || t.includes('refund')) return 'escrow';
+  if (t.includes('escrow') || t.includes('sleek hold') || t.includes('refund')) return 'escrow';
   if (t.includes('payout') || t.includes('released') || t.includes('tip')) return 'payments';
   if (t.includes('review')) return 'reviews';
   if (t.includes('proof') || t.includes('review the work')) return 'proof';

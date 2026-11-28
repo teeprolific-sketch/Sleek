@@ -8,7 +8,9 @@ export default function CustomerTabs() {
   const t = useT();
   const role = useStore((s) => s.session.role);
   const pending = useStore((s) => s.jobs.filter((j) => j.customerId === s.session.userId && (j.status === 'proof_submitted' || j.status === 'price_agreed')).length);
+  const verified = useStore((s) => s.customers.find((c) => c.id === s.session.userId)?.identity?.nin === 'passed');
   if (role !== 'customer') return <Redirect href="/" />;
+  if (!verified) return <Redirect href="/verify-customer" />;
   return (
     <ThemedTabs
       tabs={[

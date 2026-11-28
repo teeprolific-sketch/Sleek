@@ -6,11 +6,13 @@ import { confirmAction, JobStatusPill, showMessage } from '../../components/doma
 import { AutoReleaseCountdown, EscrowBadge, NetworkBanner } from '../../components/feedback';
 import { SafetyButton } from '../../components/jobParts';
 import { useT } from '../../i18n';
-import { Banner, Button, Icon, Row, Txt, toneColors } from '../../components/ui';
+import { Banner, Button, Chip, Field, Icon, Row, Txt, toneColors } from '../../components/ui';
 import { category } from '../../data/categories';
 import { isLocationDisclosed } from '../../domain/escrow';
 import { moderateMessage } from '../../domain/moderation';
 import { canAccept, latestPending, validateAmount } from '../../domain/pricePool';
+import { FEE_LABEL, feeEditable, feePaid } from '../../domain/fees';
+import type { FeeType } from '../../domain/types';
 import type { ChatMessage, Job } from '../../domain/types';
 import { useJob, useStore } from '../../store';
 import { radius, space, useTheme } from '../../theme';
@@ -109,7 +111,7 @@ export default function Chat() {
         <Row gap={4}>
           <Icon name={disclosed ? 'location' : 'lock-closed'} size={14} color={disclosed ? c.success : c.textMuted} />
           <Txt v="small" muted numberOfLines={1}>
-            {disclosed || party === 'customer' ? job.address.area : `${job.address.area} (exact address after escrow)`}
+            {disclosed || party === 'customer' ? job.address.area : `${job.address.area} (exact address after Sleek Hold)`}
           </Txt>
         </Row>
       </Row>
@@ -118,7 +120,8 @@ export default function Chat() {
         <AutoReleaseCountdown job={job} compact />
       </Row>
 
-      <PricePoolPanel job={job} party={party} />
+      <FeePanel job={job} party={party} />
+      {feePaid(job) ? <PricePoolPanel job={job} party={party} /> : null}
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={8}>
         <FlatList
@@ -251,6 +254,68 @@ function Bubble({ m, mine, job, queuedLabel }: { m: ChatMessage; mine: boolean; 
   );
 }
 
+/** Upfront fee: the customer pays it before the artisan engages; the artisan can change it until it's paid. */
+function FeePanel({ job, party }: { job: Job; party: 'customer' | 'artisan' }) {
+  const { c } = useTheme();
+  const setJobFee = useStore((s) => s.setJobFee);
+  const [edit, setEdit] = useState(false);
+  const [type, setType] = useState<FeeType>(job.fee?.type ?? 'booking');
+  const [amount, setAmount] = useState(String(job.fee?.amount ?? ''));
+  const [error, setError] = useState<string | null>(null);
+  if (!job.fee || job.status === 'cancelled' || job.status === 'declined') return null;
+  const f = job.fee;
+  const label = FEE_LABEL[f.type];
+  if (f.status !== 'unpaid') {
+    return (
+      <View style={{ marginHorizontal: space.md, marginTop: space.sm, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Icon name={f.status === 'refunded' ? 'return-down-back-outline' : 'checkmark-circle'} size={14} color={f.status === 'refunded' ? c.textMuted : c.success} />
+        <Txt v="tiny" muted>
+          {label} {naira(f.amount)} · {f.status === 'held' ? (f.type === 'inspection' ? 'in Sleek Hold until the inspection is done' : 'in Sleek Hold until the artisan sends a price') : f.status === 'released' ? 'released to the artisan' : 'refunded'}
+        </Txt>
+      </View>
+    );
+  }
+  const save = () => {
+    const r = setJobFee(job.id, { type, amount: Number(amount.replace(/\D/g, '')) });
+    if (!r.ok) return setError(r.error);
+    setError(null);
+    setEdit(false);
+  };
+  return (
+    <View style={{ margin: space.md, marginBottom: 0, padding: space.md, borderRadius: radius.md, borderWidth: 1, borderColor: c.warning, backgroundColor: c.card, gap: space.sm }}>
+      <Row gap={6}>
+        <Icon name="cash-outline" size={16} color={c.warning} />
+        <Txt v="bodyStrong" style={{ flex: 1 }}>
+          {label}: {naira(f.amount)}
+        </Txt>
+      </Row>
+      <Txt v="small" muted>
+        {party === 'customer' ? 'Pay this first. It waits in Sleek Hold, then chat and price talks open. You get it back if the artisan declines or doesn’t reply in 24 hours.' : 'Chat opens when the customer pays this fee. You can change the type or amount until they pay.'}
+      </Txt>
+      {party === 'customer' ? (
+        <Button small title={`Pay ${naira(f.amount)}`} icon="lock-closed" onPress={() => router.push({ pathname: '/fee/[id]', params: { id: job.id } })} />
+      ) : feeEditable(job) ? (
+        edit ? (
+          <View style={{ gap: space.sm }}>
+            <Row wrap gap={8}>
+              {(['booking', 'consultancy', 'inspection'] as FeeType[]).map((t) => (
+                <Chip key={t} label={FEE_LABEL[t]} selected={type === t} onPress={() => setType(t)} />
+              ))}
+            </Row>
+            <Field placeholder="Amount in ₦" value={amount} onChangeText={(t) => setAmount(t.replace(/\D/g, ''))} keyboardType="number-pad" error={error} />
+            <Row gap={space.sm}>
+              <Button small full={false} variant="ghost" title="Cancel" style={{ flex: 1 }} onPress={() => setEdit(false)} />
+              <Button small full={false} title="Save fee" style={{ flex: 1 }} onPress={save} />
+            </Row>
+          </View>
+        ) : (
+          <Button small variant="secondary" title="Change fee for this job" icon="create-outline" onPress={() => setEdit(true)} />
+        )
+      ) : null}
+    </View>
+  );
+}
+
 /** The in-chat Price Pool / Price Agreement component. */
 function PricePoolPanel({ job, party }: { job: Job; party: 'customer' | 'artisan' }) {
   const { c } = useTheme();
@@ -273,7 +338,7 @@ function PricePoolPanel({ job, party }: { job: Job; party: 'customer' | 'artisan
     setAmount('');
   };
   const accept = () =>
-    confirmAction('Lock this price?', `${naira(pending!.amount)} will be permanently locked for this job. ${party === 'customer' ? 'You’ll then pay it into Sleek Escrow.' : 'The customer will then pay it into escrow.'}`, 'Accept & lock', () => {
+    confirmAction('Lock this price?', `${naira(pending!.amount)} will be permanently locked for this job. ${party === 'customer' ? 'You’ll then pay it into Sleek Hold.' : 'The customer will then pay it into Sleek Hold.'}`, 'Accept & lock', () => {
       const r = acceptPrice(job.id);
       if (!r.ok) showMessage('Could not accept', r.error);
     });
@@ -289,14 +354,14 @@ function PricePoolPanel({ job, party }: { job: Job; party: 'customer' | 'artisan
             </Txt>
           </Row>
           {job.status === 'price_agreed' && party === 'customer' ? (
-            <Button small full={false} title="Pay into escrow" icon="shield-checkmark-outline" onPress={() => router.push({ pathname: '/escrow/[id]', params: { id: job.id } })} />
+            <Button small full={false} title="Pay into Sleek Hold" icon="shield-checkmark-outline" onPress={() => router.push({ pathname: '/escrow/[id]', params: { id: job.id } })} />
           ) : job.status === 'price_agreed' ? (
             <Txt v="small" muted>
               Waiting for payment
             </Txt>
           ) : (
             <Txt v="small" color={c.success}>
-              {job.escrow.state === 'held' || job.escrow.state === 'frozen' ? 'Held in escrow' : job.escrow.state.replace('_', ' ')}
+              {job.escrow.state === 'held' || job.escrow.state === 'frozen' ? 'Held in Sleek Hold' : job.escrow.state.replace('_', ' ')}
             </Txt>
           )}
         </Row>

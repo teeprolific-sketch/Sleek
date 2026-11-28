@@ -71,10 +71,35 @@ export function checkSkillVideo(video: SkillVideo): VideoCheck {
   return { ok: problems.length === 0, problems };
 }
 
-/** Status after automated checks: high-risk always waits for a human. */
-export function statusAfterAutoCheck(category: Category, check: VideoCheck): SkillVerification['status'] {
+/**
+ * Status after automated checks. A video that passes every automated check
+ * (recorded live in the app, 30–180s, liveness, face match with the verified
+ * identity) is approved immediately so the artisan can start taking jobs.
+ * The Trust team audits it afterwards (postReview) and can revoke it.
+ */
+export function statusAfterAutoCheck(_category: Category, check: VideoCheck): SkillVerification['status'] {
   if (!check.ok) return 'rejected';
-  return 'in_review';
+  return 'approved';
+}
+
+/** Failed attempts allowed before self-service verification locks for a Trust review. */
+export const MAX_VERIFICATION_FAILURES = 3;
+
+/** One-way hash of a NIN (FNV-1a). Lets us detect a NIN reused across accounts without storing it. */
+export function hashNIN(nin: string): string {
+  let h = 2166136261;
+  for (const ch of `sleek-nin:${nin.replace(/\D/g, '')}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter((w) => w.length > 1);
+
+/** The name on the NIN record must contain the account's first and last name (any order). */
+export function namesMatch(accountName: string, recordName: string): boolean {
+  const acct = norm(accountName);
+  const rec = new Set(norm(recordName));
+  if (acct.length < 2) return false;
+  return rec.has(acct[0]) && rec.has(acct[acct.length - 1]);
 }
 
 export function canSubmitSkill(identity: IdentityVerification, current?: SkillVerification): string | null {

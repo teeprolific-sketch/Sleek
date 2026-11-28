@@ -48,5 +48,5 @@ export const payments: PaymentGateway = mockGateway;
 /** Bank-transfer funding uses a one-time virtual account issued by the server. */
 export function virtualAccountFor(jobId: string) {
   const n = Math.abs([...jobId].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) | 0, 7));
-  return { bank: 'Sleek Escrow (Wema)', accountNumber: `99${String(n).padStart(8, '0').slice(0, 8)}`, accountName: 'SLEEK ESCROW / JOB ' + jobId.slice(-6).toUpperCase(), expiresInMin: 30 };
+  return { bank: 'Sleek Hold (Wema)', accountNumber: `99${String(n).padStart(8, '0').slice(0, 8)}`, accountName: 'SLEEK HOLD / JOB ' + jobId.slice(-6).toUpperCase(), expiresInMin: 30 };
 }

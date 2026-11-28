@@ -61,7 +61,7 @@ export default function Preferences() {
             <View style={{ flex: 1 }}>
               <Txt v="bodyStrong">Trusted artisans only</Txt>
               <Txt v="small" muted>
-                10+ escrow jobs, 4.5★+, no recent rule breaks
+                10+ Sleek Hold jobs, 4.5★+, no recent rule breaks
               </Txt>
             </View>
             <Toggle label="Trusted only" value={p.trustedOnly} onChange={(v) => set({ trustedOnly: v })} />

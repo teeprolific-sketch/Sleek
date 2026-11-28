@@ -2,15 +2,15 @@ import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import { Banner, Button, Field, Screen, Spacer, Txt } from '../../components/ui';
 import { isValidNIN } from '../../domain/verification';
-import { useMyArtisan, useStore } from '../../store';
+import { useStore, useVerifiable } from '../../store';
 
 export default function NinStep() {
   const { workerId } = useLocalSearchParams<{ workerId?: string }>();
-  const me = useMyArtisan();
+  const who = useVerifiable(workerId);
   const verifyNIN = useStore((s) => s.verifyNIN);
-  const worker = me?.workers.find((w) => w.id === workerId);
+  const worker = who?.kind === 'worker' ? who : undefined;
   const [nin, setNin] = useState('');
-  const [name, setName] = useState(worker?.name ?? me?.name ?? '');
+  const [name, setName] = useState(who?.name ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +28,7 @@ export default function NinStep() {
     <Screen title="Verify NIN" subtitle={worker ? `For ${worker.name}` : undefined} footer={<Button title="Check NIN" loading={loading} onPress={submit} />}>
       <Txt v="h2">National Identification Number</Txt>
       <Txt muted style={{ marginTop: 6 }}>
-        We check this with NIMC. The name must match the person who will do the work.
+        We check this with NIMC through our verification partner. The name on the NIN must match {worker ? 'the worker’s name' : 'your account name'} exactly, and one NIN can only be used for one Sleek account.
       </Txt>
       <Spacer h={24} />
       <Field label="Full name on NIN" value={name} onChangeText={setName} autoCapitalize="words" />

@@ -3,7 +3,6 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { showMessage } from '../components/domain';
 import { Banner, Button, Card, Chip, Divider, EmptyState, Field, Icon, KeyValue, Row, Screen, Section, Segmented, Txt } from '../components/ui';
-import { serviceItem } from '../data/seed';
 import { isLocationDisclosed } from '../domain/escrow';
 import type { DeliveryTarget } from '../domain/types';
 import type { PaymentMethod } from '../services/payments';
@@ -25,7 +24,10 @@ export default function Cart() {
   const [address, setAddress] = useState(user?.role === 'customer' ? `${user.addresses[0]?.line1}, ${user.addresses[0]?.area}` : user?.role === 'artisan' ? `${user.area}, ${user.city}` : '');
   const [method, setMethod] = useState<PaymentMethod>('card');
   const [loading, setLoading] = useState(false);
-  const totals = cartTotals(cart);
+  const products = useStore((s) => s.products);
+  const fee = useStore((s) => s.platformConfig?.deliveryFee);
+  const serviceItem = (id: string) => products.find((p) => p.id === id);
+  const totals = cartTotals(cart, products, fee);
 
   const linkable = useMemo(() => jobs.filter((j) => j.customerId === user?.id && isLocationDisclosed(j) && ['funded', 'in_progress'].includes(j.status)), [jobs, user?.id]);
   const linkedJob = jobs.find((j) => j.id === jobId);

@@ -19,6 +19,7 @@ const TYPE_LABEL: Record<LedgerEntry['type'], string> = {
   cancellation_fee: 'Late-cancellation fee',
   payout: 'Payout',
   payout_reversal: 'Payout returned',
+  fee_release: 'Upfront fee (after commission)',
 };
 
 /** Earnings & payout dashboard. */
@@ -74,7 +75,7 @@ export default function Earnings() {
       </Card>
 
       <Row gap={space.sm} style={{ marginTop: space.sm }}>
-        <Stat label="Pending in escrow" value={naira(pending)} icon="lock-closed-outline" />
+        <Stat label="Pending in Sleek Hold" value={naira(pending)} icon="lock-closed-outline" />
         <Stat label="Total earned" value={naira(totalEarned)} icon="trending-up-outline" />
       </Row>
       <Row gap={space.sm} style={{ marginTop: space.sm }}>
@@ -94,7 +95,7 @@ export default function Earnings() {
             <Txt v="bodyStrong">{naira(pending - awaitingApproval)}</Txt>
           </Row>
           <Txt v="small" muted style={{ marginTop: space.sm }}>
-            You receive {Math.round((1 - rate) * 100)}% of each job when it’s released (Sleek commission {Math.round(rate * 100)}%{trusted ? ' — Trusted rate' : '; drops to 8% when you become Trusted'}). Tips{referral ? ' and referral bonuses' : ''} are 100% yours.
+            You receive {Math.round((1 - rate) * 100)}% of each job when it’s released (Sleek commission {Math.round(rate * 100)}%). Tips{referral ? ' and referral bonuses' : ''} are 100% yours.
           </Txt>
         </Card>
       </Section>
@@ -134,7 +135,7 @@ export default function Earnings() {
             />
           ))
         ) : (
-          <Txt muted>Nothing here yet. Your first released escrow payment will show up here.</Txt>
+          <Txt muted>Nothing here yet. Your first payment released from Sleek Hold will show up here.</Txt>
         )}
       </Section>
 

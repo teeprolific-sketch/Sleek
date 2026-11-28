@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { Banner, Button, Card, Chip, Icon, KeyValue, Pill, Row, Screen, Section, Txt } from '../../components/ui';
 import { categoryName } from '../../data/categories';
-import { serviceItem } from '../../data/seed';
 import { useStore } from '../../store';
 import { radius, space, useTheme } from '../../theme';
 import { day, naira } from '../../utils/format';
@@ -11,7 +10,7 @@ import { day, naira } from '../../utils/format';
 export default function ItemDetail() {
   const { c } = useTheme();
   const { id, jobId } = useLocalSearchParams<{ id: string; jobId?: string }>();
-  const it = serviceItem(id);
+  const it = useStore((s) => s.products.find((p) => p.id === id));
   const addToCart = useStore((s) => s.addToCart);
   const [qty, setQty] = useState(1);
   const [days, setDays] = useState(1);

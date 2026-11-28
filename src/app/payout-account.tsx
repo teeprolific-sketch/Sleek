@@ -1,15 +1,20 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Banner, Button, Chip, Field, Row, Screen, Section, Txt } from '../components/ui';
-import { useMyArtisan, useStore } from '../store';
+import { useMyArtisan, useMySeller, useStore } from '../store';
 import { space } from '../theme';
 
 const BANKS = ['Access', 'GTBank', 'First Bank', 'UBA', 'Zenith', 'Wema', 'Kuda', 'Moniepoint', 'OPay', 'Fidelity', 'Stanbic IBTC', 'Sterling'];
 
 /** Payout account must be in the verified name. Resolved server-side via the bank's name-enquiry API. */
 export default function PayoutAccount() {
-  const me = useMyArtisan();
-  const setPayoutAccount = useStore((s) => s.setPayoutAccount);
+  const artisan = useMyArtisan();
+  const seller = useMySeller();
+  const me = artisan ?? seller;
+  const setArtisanAccount = useStore((s) => s.setPayoutAccount);
+  const setSellerAccount = useStore((s) => s.setSellerPayoutAccount);
+  const logProvider = useStore((s) => s.logProvider);
+  const setPayoutAccount = seller ? setSellerAccount : setArtisanAccount;
   const [bank, setBank] = useState(me?.payoutAccount?.bankName ?? 'GTBank');
   const [acct, setAcct] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,6 +30,7 @@ export default function PayoutAccount() {
     setTimeout(() => {
       setLoading(false);
       setResolved(nameOnRecord.toUpperCase());
+      logProvider('payments', 'resolve_account', `Paystack: ${bank} account ••${acct.slice(-4)} resolved to ${nameOnRecord.toUpperCase()} (matches verified name)`);
     }, 800);
   };
   const save = () => {

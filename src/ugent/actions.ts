@@ -53,7 +53,7 @@ function jobStatus(jobId: string) {
   if (!j) return null;
   const next: Record<string, string> = {
     requested: 'Agree a price in the Price Pool',
-    price_agreed: 'Customer pays the locked price into escrow',
+    price_agreed: 'Customer pays the locked price into Sleek Hold',
     funded: 'Artisan arrives at the scheduled time',
     in_progress: 'Artisan is working; proof of work comes next',
     proof_submitted: 'Customer approves or disputes the proof of work',
@@ -142,8 +142,8 @@ function summarise(name: UgentActionName, args: Args): { text: string } | { erro
       return job ? { text: `Offer ${naira(Number(args.amount))} for “${job.title}”.` } : { error: 'Job not found.' };
     case 'request_escrow_funding':
       if (!job) return { error: 'Job not found.' };
-      if (job.status !== 'price_agreed') return { error: 'The price must be locked before paying into escrow.' };
-      return { text: `Pay ${naira(job.pricePool.locked!.amount)} into Sleek Escrow for “${job.title}”. You’ll complete payment yourself in Sleek.` };
+      if (job.status !== 'price_agreed') return { error: 'The price must be locked before paying into Sleek Hold.' };
+      return { text: `Pay ${naira(job.pricePool.locked!.amount)} into Sleek Hold for “${job.title}”. You’ll complete payment yourself in Sleek.` };
     case 'approve_job_completion':
       return job ? { text: `Approve the work on “${job.title}” and release ${naira(job.escrow.amount)} to the artisan.` } : { error: 'Job not found.' };
     case 'cancel_job':

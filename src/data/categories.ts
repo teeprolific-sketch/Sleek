@@ -1,4 +1,4 @@
-import type { Category } from '../domain/types';
+import type { Category, FeeType } from '../domain/types';
 
 const c = (
   id: string,
@@ -17,7 +17,7 @@ const c = (
   videoBrief: opts.videoBrief ?? `Show yourself doing real ${name.toLowerCase()} work from start to finish. Keep your face visible at the start and end.`,
 });
 
-/** 60 trades. `high` risk trades always get human review and may need a certificate. */
+/** 100 trades. `high` risk trades get priority in the Trust team's audit. */
 export const CATEGORIES: Category[] = [
   // Home repairs
   c('electrician', 'Electrician', 'Home Repairs', 'flash-outline', { risk: 'high', videoBrief: 'Show safe isolation (breaker off), testing with a meter, and a full socket or fitting installation.' }),
@@ -95,8 +95,60 @@ export const CATEGORIES: Category[] = [
   c('fitness', 'Fitness Trainer', 'Lessons & Wellness', 'barbell-outline', { defaultSize: 'short', multiJobFriendly: true }),
   c('chef', 'Private Chef / Cook', 'Lessons & Wellness', 'pizza-outline'),
   c('pet_care', 'Pet Grooming & Care', 'Lessons & Wellness', 'paw-outline', { defaultSize: 'short', multiJobFriendly: true }),
-  c('security_guard', 'Security Guard', 'Lessons & Wellness', 'shield-checkmark-outline', { risk: 'high', defaultSize: 'large' }),
+  c('security_guard', 'Security Guard', 'Lessons & Wellness', 'shield-checkmark-outline', { risk: 'high', defaultSize: 'large' }),  // Added trades (64 → 100)
+  c('interior_designer', 'Interior Designer', 'Home Repairs', 'easel-outline', { defaultSize: 'large' }),
+  c('wallpaper', 'Wallpaper & 3D Panels', 'Home Repairs', 'albums-outline'),
+  c('plasterer', 'Screeding & Plastering', 'Home Repairs', 'construct-outline', { defaultSize: 'large' }),
+  c('borehole', 'Borehole & Water Pump', 'Home Repairs', 'water-outline', { risk: 'high', defaultSize: 'large' }),
+  c('water_tank', 'Water Tank Cleaning & Install', 'Home Repairs', 'beaker-outline'),
+  c('doors_windows', 'Doors & Windows Installer', 'Home Repairs', 'browsers-outline'),
+  c('interlock', 'Interlocking & Paving', 'Home Repairs', 'apps-outline', { defaultSize: 'large' }),
+  c('electric_fence', 'Electric Fence & Razor Wire', 'Home Repairs', 'flash-outline', { risk: 'high' }),
+  c('gas_installer', 'Gas Pipe & Cylinder Installer', 'Home Repairs', 'flame-outline', { risk: 'high' }),
+  c('septic', 'Septic Tank Evacuation', 'Home Repairs', 'trash-outline'),
+  c('curtains', 'Curtains & Blinds', 'Home Repairs', 'reorder-four-outline', { defaultSize: 'short' }),
+  c('tv_mounting', 'TV Wall Mounting', 'Home Repairs', 'tv-outline', { defaultSize: 'short', multiJobFriendly: true }),
+  c('handyman', 'Handyman (Small Fixes)', 'Home Repairs', 'build-outline', { defaultSize: 'short', multiJobFriendly: true }),
+  c('washing_machine', 'Washing Machine Repair', 'Appliances & Tech', 'sync-outline'),
+  c('cooker_repair', 'Gas Cooker & Oven Repair', 'Appliances & Tech', 'bonfire-outline', { risk: 'high' }),
+  c('water_heater', 'Water Heater Repair', 'Appliances & Tech', 'thermometer-outline'),
+  c('web_developer', 'Website & App Developer', 'Appliances & Tech', 'code-slash-outline', { defaultSize: 'large' }),
+  c('smart_home', 'Smart Home & Intercom', 'Appliances & Tech', 'home-outline'),
+  c('meter_installer', 'Prepaid Meter Installer', 'Appliances & Tech', 'speedometer-outline', { risk: 'high' }),
+  c('auto_ac', 'Car AC Repair', 'Auto', 'snow-outline'),
+  c('towing', 'Towing & Recovery', 'Auto', 'car-outline', { defaultSize: 'short' }),
+  c('car_detailing', 'Car Detailing', 'Auto', 'sparkles-outline', { defaultSize: 'short', multiJobFriendly: true }),
+  c('car_tracker', 'Car Tracker Install', 'Auto', 'locate-outline', { defaultSize: 'short' }),
+  c('office_cleaning', 'Office Cleaning', 'Cleaning & Home', 'business-outline'),
+  c('housekeeper', 'Housekeeper', 'Cleaning & Home', 'home-outline', { defaultSize: 'large' }),
+  c('braider', 'Hair Braider', 'Fashion & Beauty', 'git-merge-outline'),
+  c('lash_brow', 'Lash & Brow Technician', 'Fashion & Beauty', 'eye-outline', { defaultSize: 'short', multiJobFriendly: true }),
+  c('jeweller', 'Jewellery Repair', 'Fashion & Beauty', 'diamond-outline', { defaultSize: 'short' }),
+  c('event_planner', 'Event Planner', 'Events & Media', 'calendar-outline', { defaultSize: 'large' }),
+  c('live_band', 'Live Band / Musician', 'Events & Media', 'musical-notes-outline', { defaultSize: 'large' }),
+  c('drone', 'Drone Photography', 'Events & Media', 'airplane-outline'),
+  c('printing', 'Printing & Branding', 'Events & Media', 'print-outline'),
+  c('music_teacher', 'Music Teacher', 'Lessons & Wellness', 'musical-note-outline', { defaultSize: 'short', multiJobFriendly: true }),
+  c('driving_instructor', 'Driving Instructor', 'Lessons & Wellness', 'speedometer-outline', { defaultSize: 'short', multiJobFriendly: true }),
+  c('physio', 'Physiotherapist', 'Lessons & Wellness', 'body-outline', { risk: 'high', defaultSize: 'short' }),
+  c('home_nurse', 'Home Nurse', 'Lessons & Wellness', 'medkit-outline', { risk: 'high', defaultSize: 'large' }),
 ];
+
+// ---------------------------------------------------------------------------
+// Upfront fees: every booking starts with one fee, paid before the artisan engages.
+// Sleek sets the default type per trade; each artisan can change the type and amount.
+// ---------------------------------------------------------------------------
+
+/** Trades where the artisan must come and see the problem before quoting. */
+const INSPECTION = new Set(['electrician', 'plumber', 'carpenter', 'painter', 'tiler', 'mason', 'welder', 'pop_ceiling', 'roofer', 'glazier', 'ac_tech', 'fridge_tech', 'generator_tech', 'solar_installer', 'cctv', 'mechanic', 'auto_electrician', 'panel_beater', 'fumigation', 'pool', 'plasterer', 'borehole', 'water_tank', 'doors_windows', 'interlock', 'electric_fence', 'gas_installer', 'septic', 'washing_machine', 'cooker_repair', 'water_heater', 'smart_home', 'meter_installer', 'auto_ac', 'deep_cleaning', 'upholstery', 'movers', 'wallpaper', 'network_tech']);
+/** Trades where the first step is advice or planning. */
+const CONSULTANCY = new Set(['interior_designer', 'event_planner', 'decorator', 'web_developer', 'graphic_designer', 'physio', 'caterer', 'tutor', 'fitness', 'printing', 'live_band']);
+
+export const DEFAULT_FEE_AMOUNT: Record<FeeType, number> = { booking: 2000, consultancy: 5000, inspection: 5000 };
+
+export function defaultFeeType(categoryId: string): FeeType {
+  return INSPECTION.has(categoryId) ? 'inspection' : CONSULTANCY.has(categoryId) ? 'consultancy' : 'booking';
+}
 
 const byId = new Map(CATEGORIES.map((x) => [x.id, x]));
 export function category(id: string): Category {

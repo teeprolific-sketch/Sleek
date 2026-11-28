@@ -33,7 +33,7 @@ export const en = {
   'home.popular': 'Popular services',
   'home.topAvailable': 'Top available in {city}',
   'home.rankedNote': 'Ranked by verification, completed jobs, ratings and reliability. Only artisans available right now are shown.',
-  'home.escrowTitle': 'Pay safely with escrow',
+  'home.escrowTitle': 'Pay safely with Sleek Hold',
   'home.escrowBody': 'Your money is held by Sleek and released only after you approve the work.',
   'home.howItWorks': 'How it works',
   'home.saved': 'Your saved artisans',
@@ -58,7 +58,7 @@ export const en = {
   'timeline.title': 'Job timeline',
   'timeline.requested': 'Requested',
   'timeline.price_agreed': 'Price agreed',
-  'timeline.booked': 'Booked · escrow funded',
+  'timeline.booked': 'Booked · paid into Sleek Hold',
   'timeline.en_route': 'Artisan en route',
   'timeline.started': 'Work started',
   'timeline.proof': 'Proof submitted',
@@ -68,9 +68,9 @@ export const en = {
   'timeline.waiting': 'Waiting',
 
   // escrow
-  'escrow.protected': 'Escrow Protected',
-  'escrow.protectedHeld': 'Escrow Protected · {amount} held',
-  'escrow.notFunded': 'Not yet in escrow',
+  'escrow.protected': 'Sleek Hold Protected',
+  'escrow.protectedHeld': 'Sleek Hold Protected · {amount} held',
+  'escrow.notFunded': 'Not yet in Sleek Hold',
   'escrow.autoRelease': 'Auto-release in {time}',
   'escrow.autoReleaseSoon': 'Payment releases automatically in {time} unless you approve or dispute.',
 
@@ -83,7 +83,7 @@ export const en = {
 
   // disputes
   'dispute.centre': 'Dispute Centre',
-  'dispute.intro': 'Something not right? We’ll look at it fairly. Your money stays safely in escrow while Sleek reviews the chat, the agreed price and all photos.',
+  'dispute.intro': 'Something not right? We’ll look at it fairly. Your money stays safely in Sleek Hold while Sleek reviews the chat, the agreed price and all photos.',
   'dispute.open': 'Open a dispute',
   'dispute.active': 'Active',
   'dispute.closed': 'Closed',

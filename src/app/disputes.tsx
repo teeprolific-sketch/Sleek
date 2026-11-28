@@ -49,7 +49,7 @@ export default function DisputeCentre() {
           ))
         ) : (
           <Txt v="small" muted>
-            You can open a dispute on any job where money is held in escrow (booked, in progress, or awaiting approval). For problems after approval, use Sleek Protection on the job page.
+            You can open a dispute on any job where money is in Sleek Hold (booked, in progress, or awaiting approval). For problems after approval, use Sleek Protection on the job page.
           </Txt>
         )}
       </Section>

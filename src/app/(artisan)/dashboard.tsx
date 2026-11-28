@@ -69,7 +69,7 @@ export default function ArtisanDashboard() {
           <Banner tone="primary" icon="business-outline" title={`Finish setting up your ${me.accountType}`} body="Business details, workers, payout account and calendar — about 5 minutes." action="Continue setup" onAction={() => router.push('/onboarding-business')} />
         </View>
       ) : null}
-      <CoachTip id="tip_artisan_flow" title="How you get paid on Sleek" body="Agree a price in chat → customer pays into escrow → tap “I’m on my way”, start, upload proof → you’re paid when they approve (or automatically if they don’t respond)." icon="wallet-outline" />
+      <CoachTip id="tip_artisan_flow" title="How you get paid on Sleek" body="Agree a price in chat → customer pays into Sleek Hold → tap “I’m on my way”, start, upload proof → you’re paid when they approve (or automatically if they don’t respond)." icon="wallet-outline" />
       {!verified || !hasSkill ? (
         <View style={{ marginTop: space.md }}>
           <Banner tone="warning" icon="finger-print-outline" title="Finish verification to get jobs" body={!verified ? 'Verify your NIN and face first. It takes about 3 minutes.' : 'Record a proof-of-work video for at least one skill.'} action="Continue verification" onAction={() => router.push('/verify')} />
@@ -83,7 +83,7 @@ export default function ArtisanDashboard() {
       </Row>
       <Row gap={space.sm} style={{ marginTop: space.sm }}>
         <Stat label="Available to withdraw" value={naira(balanceOf(ledger, me.id))} icon="wallet-outline" />
-        <Stat label="Held in escrow" value={naira(inEscrow)} icon="lock-closed-outline" />
+        <Stat label="Held in Sleek Hold" value={naira(inEscrow)} icon="lock-closed-outline" />
       </Row>
 
       {onJob.length ? (
@@ -126,13 +126,13 @@ export default function ArtisanDashboard() {
             </Txt>
           </Row>
           <Txt v="small" muted style={{ marginVertical: 6 }}>
-            Rating {displayRating(me).toFixed(1)} · {me.stats.completedJobs} escrow jobs · {me.stats.ruleViolations} rule warnings
+            Rating {displayRating(me).toFixed(1)} · {me.stats.completedJobs} jobs paid through Sleek Hold · {me.stats.ruleViolations} rule warnings
           </Txt>
           <BadgeRow artisan={me} />
           <Row gap={6} style={{ marginTop: space.md }}>
             <Icon name="trending-up-outline" size={16} color={c.success} />
             <Txt v="small" muted style={{ flex: 1 }}>
-              Completed escrow jobs raise your ranking. Cancellations, lost disputes and sharing contacts lower it.
+              Completed jobs paid through Sleek Hold raise your ranking. Cancellations, lost disputes and sharing contacts lower it.
             </Txt>
           </Row>
         </Card>

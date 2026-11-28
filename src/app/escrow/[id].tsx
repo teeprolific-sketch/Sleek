@@ -11,7 +11,7 @@ import { naira, windowLabel } from '../../utils/format';
 
 const METHODS: { id: PaymentMethod; icon: string; title: string; body: string }[] = [
   { id: 'card', icon: 'card-outline', title: 'Debit card', body: 'Verve, Mastercard or Visa' },
-  { id: 'transfer', icon: 'swap-horizontal-outline', title: 'Bank transfer', body: 'Pay into a one-time Sleek Escrow account' },
+  { id: 'transfer', icon: 'swap-horizontal-outline', title: 'Bank transfer', body: 'Pay into a one-time Sleek Hold account' },
   { id: 'ussd', icon: 'keypad-outline', title: 'USSD', body: 'Works without data' },
 ];
 
@@ -24,7 +24,7 @@ export default function EscrowPayment() {
   const [method, setMethod] = useState<PaymentMethod>('card');
   const [loading, setLoading] = useState(false);
 
-  if (!job || !artisan) return <Screen title="Escrow">{<Txt>Not found.</Txt>}</Screen>;
+  if (!job || !artisan) return <Screen title="Sleek Hold">{<Txt>Not found.</Txt>}</Screen>;
   const amount = job.pricePool.locked?.amount ?? 0;
   const va = virtualAccountFor(job.id);
 
@@ -38,20 +38,20 @@ export default function EscrowPayment() {
 
   return (
     <Screen
-      title="Pay into Sleek Escrow"
+      title="Pay into Sleek Hold"
       footer={
         canFund(job) ? (
-          <Button title={`Pay ${naira(amount)} into escrow`} icon="lock-closed" loading={loading} onPress={pay} />
+          <Button title={`Pay ${naira(amount)} into Sleek Hold`} icon="lock-closed" loading={loading} onPress={pay} />
         ) : job.escrow.state === 'held' || job.escrow.state === 'frozen' ? (
           <Banner tone="success" body="This job is already funded." />
         ) : (
-          <Banner tone="warning" body="Agree and lock a price in the chat’s Price Pool first. Then you can pay into escrow." action="Open chat" onAction={() => router.replace({ pathname: '/chat/[id]', params: { id: job.id } })} />
+          <Banner tone="warning" body="Agree and lock a price in the chat’s Price Pool first. Then you can pay into Sleek Hold." action="Open chat" onAction={() => router.replace({ pathname: '/chat/[id]', params: { id: job.id } })} />
         )
       }
     >
       <Card tone="soft">
         <Txt v="small" muted>
-          Amount to hold in escrow
+          Amount to hold in Sleek Hold
         </Txt>
         <Txt v="h1" style={{ fontSize: 34, marginTop: 4 }}>
           {naira(amount)}

@@ -29,7 +29,7 @@ export default function CustomerJobs() {
         <EmptyState
           icon="briefcase-outline"
           title={tab === 'past' ? 'No past jobs yet' : tab === 'upcoming' ? 'Nothing scheduled' : 'No active jobs'}
-          body={tab === 'upcoming' ? 'Jobs appear here once you’ve paid into escrow and they’re waiting for their date.' : 'Find a verified artisan, agree a price in chat, and pay safely with escrow.'}
+          body={tab === 'upcoming' ? 'Jobs appear here once you’ve paid into Sleek Hold and they’re waiting for their date.' : 'Find a verified artisan, agree a price in chat, and pay safely with Sleek Hold.'}
           action="Find an artisan"
           onAction={() => router.push('/search')}
         />

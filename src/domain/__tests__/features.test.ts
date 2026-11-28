@@ -200,3 +200,59 @@ describe('notification preferences', () => {
     expect(shouldPush({ ...p, enabled: { safety: false } }, 'safety', base)).toBe(true);
   });
 });
+
+import { hashNIN, namesMatch, statusAfterAutoCheck as autoStatus } from '../verification';
+import { category as cat } from '../../data/categories';
+
+describe('instant verification and anti-fake rules', () => {
+  it('approves a skill video instantly when every automated check passes', () => {
+    expect(autoStatus(cat('mechanic'), { ok: true, problems: [] })).toBe('approved');
+    expect(autoStatus(cat('electrician'), { ok: false, problems: ['x'] })).toBe('rejected');
+  });
+  it('requires the NIN name to contain the account first and last name', () => {
+    expect(namesMatch('Tunde Bakare', 'BAKARE Tunde Adewale')).toBe(true);
+    expect(namesMatch('Tunde Bakare', 'Femi Bakare')).toBe(false);
+    expect(namesMatch('Tunde', 'Tunde Bakare')).toBe(false);
+  });
+  it('hashes a NIN the same way every time so reuse across accounts is caught', () => {
+    expect(hashNIN('123 4567 8901')).toBe(hashNIN('12345678901'));
+    expect(hashNIN('12345678901')).not.toBe(hashNIN('12345678902'));
+  });
+});
+
+import { feeExpired, feeFor, feeSplit, releasesOn, validateFee } from '../fees';
+import { CATEGORIES, defaultFeeType } from '../../data/categories';
+
+describe('100 trades and upfront fees', () => {
+  it('has exactly 100 unique trades', () => {
+    expect(CATEGORIES).toHaveLength(100);
+    expect(new Set(CATEGORIES.map((c) => c.id)).size).toBe(100);
+  });
+  it('uses Sleek’s default fee type per trade unless the artisan or admin sets one', () => {
+    expect(defaultFeeType('mechanic')).toBe('inspection');
+    expect(defaultFeeType('interior_designer')).toBe('consultancy');
+    expect(defaultFeeType('barber')).toBe('booking');
+    expect(feeFor({ fees: undefined }, 'mechanic')).toEqual({ type: 'inspection', amount: 5000 });
+    expect(feeFor({ fees: undefined }, 'mechanic', { mechanic: 'booking' })).toEqual({ type: 'booking', amount: 2000 });
+    expect(feeFor({ fees: { mechanic: { type: 'consultancy', amount: 10000 } } }, 'mechanic')).toEqual({ type: 'consultancy', amount: 10000 });
+  });
+  it('takes Sleek’s 20% from every fee', () => {
+    expect(feeSplit(5000, 0.2)).toEqual({ commission: 1000, toArtisan: 4000 });
+  });
+  it('validates amounts', () => {
+    expect(validateFee({ type: 'inspection', amount: 100 })).toMatch(/at least/);
+    expect(validateFee({ type: 'inspection', amount: 5000 })).toBeNull();
+  });
+  it('releases inspection fees only after the inspection, others when the artisan engages', () => {
+    const held = { type: 'inspection' as const, amount: 5000, status: 'held' as const };
+    expect(releasesOn(held, 'engaged')).toBe(false);
+    expect(releasesOn(held, 'inspected')).toBe(true);
+    expect(releasesOn({ ...held, type: 'booking' }, 'engaged')).toBe(true);
+    expect(releasesOn({ ...held, status: 'released' }, 'price_agreed')).toBe(false);
+  });
+  it('refunds a fee when the artisan never responds', () => {
+    const j = { status: 'requested', fee: { type: 'booking', amount: 2000, status: 'held', paidAt: new Date(0).toISOString() }, pricePool: { offers: [] } } as never;
+    expect(feeExpired(j, 25 * 3_600_000)).toBe(true);
+    expect(feeExpired(j, 2 * 3_600_000)).toBe(false);
+  });
+});

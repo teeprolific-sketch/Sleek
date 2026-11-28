@@ -68,6 +68,21 @@ export default function CustomerHome() {
         </Pressable>
       </View>
 
+      <Pressable onPress={() => router.push('/match')} accessibilityRole="button" style={{ marginTop: space.md, backgroundColor: c.heroBg, borderRadius: radius.lg, padding: space.lg, flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: c.heroAccent, alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="flash" size={22} color={c.heroAccentText} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Txt v="bodyStrong" color={c.heroText}>
+            Find me someone
+          </Txt>
+          <Txt v="small" color={c.heroMuted}>
+            Tell us the problem. We send it to the best verified artisan who’s free.
+          </Txt>
+        </View>
+        <Icon name="arrow-forward" size={20} color={c.heroText} />
+      </Pressable>
+
       <Row gap={space.sm} style={{ marginTop: space.md }}>
         {QUICK.map((x) => (
           <Pressable key={x.key} onPress={() => router.push(x.to as never)} accessibilityRole="button" style={{ flex: 1, alignItems: 'center', paddingVertical: space.sm, borderRadius: radius.md, backgroundColor: c.surface }}>
@@ -80,23 +95,21 @@ export default function CustomerHome() {
       </Row>
 
       {isNew ? (
-        <CoachTip id="tip_first_booking" title="New here? How Sleek keeps you safe" body="1. Pick a verified artisan. 2. Agree the price in chat. 3. Pay into escrow — the artisan only gets paid after you approve the work." icon="school-outline" />
+        <CoachTip id="tip_first_booking" title="New here? How Sleek keeps you safe" body="1. Pick a verified artisan. 2. Agree the price in chat. 3. Pay into Sleek Hold — the artisan only gets paid after you approve the work." icon="school-outline" />
       ) : null}
 
-      <Card onPress={() => router.push('/ugent')} style={{ marginTop: space.md, backgroundColor: c.heroBg, borderColor: c.heroBg }}>
+      <Card onPress={() => router.push('/ugent')} style={{ marginTop: space.md }}>
         <Row gap={space.md}>
-          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.heroAccent, alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="sparkles" color={c.heroAccentText} />
+          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: c.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="sparkles" size={18} color={c.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Txt v="bodyStrong" color={c.heroText}>
-              {t('home.ugentTitle')}
-            </Txt>
-            <Txt v="small" color={c.heroMuted}>
+            <Txt v="bodyStrong">{t('home.ugentTitle')}</Txt>
+            <Txt v="small" muted numberOfLines={1}>
               {t('home.ugentBody')}
             </Txt>
           </View>
-          <Icon name="chevron-forward" color={c.heroText} />
+          <Icon name="chevron-forward" color={c.textMuted} />
         </Row>
       </Card>
 

@@ -64,7 +64,7 @@ export default function ProofReview() {
           ) : null}
           <Section title="Payment">
             <Card>
-              <KeyValue k="Held in escrow" v={naira(amount)} />
+              <KeyValue k="Held in Sleek Hold" v={naira(amount)} />
               <KeyValue k="Artisan receives" v={naira(commissionFor(amount, false).payout) + '+'} />
               <Txt v="small" muted style={{ marginTop: 6 }}>
                 Sleek’s commission comes out of the artisan’s side. You pay nothing extra.

@@ -9,7 +9,7 @@
 export type ID = string;
 export type ISODate = string;
 
-export type Role = 'customer' | 'artisan' | 'admin';
+export type Role = 'customer' | 'artisan' | 'seller' | 'admin';
 export type ArtisanAccountType = 'individual' | 'team' | 'agency';
 
 export type ThemeMode = 'white' | 'black' | 'blue';
@@ -19,6 +19,44 @@ export type ThemeMode = 'white' | 'black' | 'blue';
 // ---------------------------------------------------------------------------
 
 export type RiskLevel = 'standard' | 'high';
+
+/** The one upfront fee a customer pays before an artisan engages: set per trade by Sleek, changeable by the artisan. */
+export type FeeType = 'booking' | 'consultancy' | 'inspection';
+
+export interface FeeSetting {
+  type: FeeType;
+  amount: number;
+}
+
+export interface JobFee extends FeeSetting {
+  /** unpaid → held (in Sleek Hold) → released to the artisan (minus commission), or refunded. */
+  status: 'unpaid' | 'held' | 'released' | 'refunded';
+  paidAt?: ISODate;
+  reference?: string;
+  releasedAt?: ISODate;
+  commission?: number;
+  toArtisan?: number;
+  refundedAt?: ISODate;
+}
+
+export type AuthProvider = 'phone' | 'google' | 'apple' | 'email';
+
+/** Someone who vouches for an artisan, team, agency or seller. They confirm by SMS code. */
+export interface Guarantor {
+  name: string;
+  phone: string;
+  relationship: string;
+  occupation: string;
+  status: 'pending' | 'confirmed';
+  confirmedAt?: ISODate;
+}
+
+/** A policy the person agreed to, and which version. */
+export interface PolicyConsent {
+  policyId: string;
+  version: string;
+  at: ISODate;
+}
 export type JobSize = 'short' | 'normal' | 'large';
 
 export interface Category {
@@ -49,7 +87,15 @@ export interface IdentityVerification {
   faceMatchScore?: number; // 0..1
   verifiedAt?: ISODate;
   fullNameOnRecord?: string;
+  /** One-way hash of the full NIN, used only to stop one NIN opening several accounts. */
+  ninHash?: string;
+  /** Failed NIN / face attempts. 3 failures lock self-service verification until Trust reviews it. */
+  failedAttempts?: number;
+  /** Instant checks pass first; the Trust team audits afterwards and can revoke. */
+  postReview?: PostReview;
 }
+
+export type PostReview = 'pending' | 'confirmed' | 'revoked';
 
 export type SkillVerificationStatus =
   | 'not_started'
@@ -85,6 +131,8 @@ export interface SkillVerification {
   certificateProvided?: boolean;
   /** Photo of the trade certificate/licence, captured in-app (high-risk trades). */
   certificate?: CapturedMedia;
+  /** Approved instantly by the automated checks, then audited by the Trust team. */
+  postReview?: PostReview;
 }
 
 // ---------------------------------------------------------------------------
@@ -120,6 +168,13 @@ export interface Customer {
   /** Sleek credit (referral rewards), usable on Sleek Services. */
   credit?: number;
   referralCode?: string;
+  email?: string;
+  suspended?: boolean;
+  suspendedReason?: string;
+  authProvider?: AuthProvider;
+  consents?: PolicyConsent[];
+  phoneVerified?: boolean;
+  emailVerified?: boolean;
 }
 
 export type GenderPreference = 'any' | 'female' | 'male';
@@ -202,6 +257,19 @@ export interface Artisan {
   referralCode?: string;
   /** Team/Agency business details collected in the dedicated onboarding flow. */
   business?: BusinessDetails;
+  /** Verified email: used for verification results and important account notices. */
+  email?: string;
+  suspended?: boolean;
+  suspendedReason?: string;
+  /** Upfront fee per trade (type and amount), chosen by the artisan. Falls back to Sleek's default for the trade. */
+  fees?: Record<ID, FeeSetting>;
+  authProvider?: AuthProvider;
+  guarantor?: Guarantor;
+  /** Set when every onboarding check has passed; the dashboard opens only then. */
+  activatedAt?: ISODate;
+  consents?: PolicyConsent[];
+  phoneVerified?: boolean;
+  emailVerified?: boolean;
 }
 
 export interface TimeOff {
@@ -212,7 +280,9 @@ export interface TimeOff {
 }
 
 export interface BusinessDetails {
-  cacNumber?: string; // CAC registration (required for agencies)
+  cacNumber?: string; // CAC registration (asked of teams and agencies)
+  /** Not registered with CAC yet: allowed, but flagged for the Trust team. */
+  cacPending?: boolean;
   serviceAreas: string[];
   teamSize: number;
   completedOnboarding: boolean;
@@ -240,7 +310,100 @@ export interface Admin {
   phone: string;
 }
 
-export type User = Customer | Artisan | Admin;
+/** Sells products or rents out equipment on Sleek Services. Verified like artisans (NIN + face). */
+export interface Seller {
+  id: ID;
+  role: 'seller';
+  name: string;
+  businessName: string;
+  phone: string;
+  email: string;
+  area: string;
+  city: string;
+  joinedAt: ISODate;
+  identity: IdentityVerification;
+  cacNumber?: string;
+  /** Becomes true the moment identity verification passes. */
+  storeLive: boolean;
+  avatarColor: string;
+  payoutAccount?: PayoutAccount;
+  suspended?: boolean;
+  suspendedReason?: string;
+  authProvider?: AuthProvider;
+  guarantor?: Guarantor;
+  activatedAt?: ISODate;
+  consents?: PolicyConsent[];
+  /** True when the seller says they aren't registered with CAC yet (allowed, but flagged for review). */
+  cacPending?: boolean;
+  phoneVerified?: boolean;
+  emailVerified?: boolean;
+}
+
+export type User = Customer | Artisan | Seller | Admin;
+
+// ---------------------------------------------------------------------------
+// Support, email, provider log
+// ---------------------------------------------------------------------------
+
+export type TicketStatus = 'open' | 'waiting_on_you' | 'resolved';
+export type TicketCategory = 'payment' | 'job' | 'order' | 'account' | 'verification' | 'safety' | 'other';
+
+export interface TicketMessage {
+  id: ID;
+  from: 'user' | 'agent' | 'system';
+  name?: string;
+  text: string;
+  at: ISODate;
+}
+
+export interface SupportTicket {
+  id: ID;
+  userId: ID;
+  userRole: 'customer' | 'artisan' | 'seller';
+  subject: string;
+  category: TicketCategory;
+  jobId?: ID;
+  orderId?: ID;
+  status: TicketStatus;
+  priority: 'normal' | 'high' | 'urgent';
+  assignedTo?: string;
+  messages: TicketMessage[];
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+export interface EmailMessage {
+  id: ID;
+  to: string;
+  userId?: ID;
+  subject: string;
+  body: string;
+  at: ISODate;
+}
+
+export type ProviderKey = 'payments' | 'identity' | 'sms' | 'email' | 'maps' | 'storage' | 'vision';
+
+/** A record of each call to an outside provider (simulated in demo builds). */
+export interface ProviderEvent {
+  id: ID;
+  provider: ProviderKey;
+  action: string;
+  summary: string;
+  ok: boolean;
+  at: ISODate;
+}
+
+/** Platform settings the admin console can change. */
+export interface PlatformConfig {
+  commissionRate: number;
+  offAppStrikesToSuspend: number;
+  autoReleaseHours: { short: number; normal: number; large: number };
+  protectionDays: number;
+  protectionCap: number;
+  deliveryFee: number;
+  /** Sleek's fee type per trade, overriding the built-in default. */
+  tradeFeeTypes?: Record<ID, FeeType>;
+}
 
 // ---------------------------------------------------------------------------
 // Jobs, price pool, escrow
@@ -359,7 +522,10 @@ export interface Job {
   updatedAt: ISODate;
   timeline: JobTimelineEvent[];
   /** Set when the booking was initiated by Ugent on the user's behalf. */
-  origin: 'app' | 'ugent';
+  origin: 'app' | 'ugent' | 'match';
+  /** Upfront booking / consultancy / inspection fee for this job. */
+  fee?: JobFee;
+  inspectedAt?: ISODate;
   /** Artisan tapped "I'm on my way". */
   enRouteAt?: ISODate;
   startedAt?: ISODate;
@@ -554,6 +720,10 @@ export interface ServiceItem {
   vendor: string;
   vendorArea: string;
   stock: number;
+  /** The Sleek Services seller who listed it (seed items belong to demo sellers). */
+  sellerId?: ID;
+  /** live = visible in the shop; unlisted = hidden by the seller or by Sleek. */
+  status?: 'live' | 'unlisted';
   deposit?: number; // rentals: refundable deposit
   relatedCategoryIds: ID[];
 }
@@ -584,6 +754,17 @@ export interface Order {
   placedAt: ISODate;
   timeline: { at: ISODate; label: string }[];
   eta?: ISODate;
+  /** The Sleek rider delivering it. Their number is shown only after payment. */
+  rider?: Rider;
+}
+
+export interface Rider {
+  id: ID;
+  name: string;
+  phone: string;
+  bike: string;
+  plate: string;
+  rating: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -616,7 +797,7 @@ export interface LedgerEntry {
   id: ID;
   artisanId: ID;
   jobId?: ID;
-  type: 'escrow_release' | 'payout' | 'cancellation_fee' | 'tip' | 'referral_bonus' | 'payout_reversal';
+  type: 'escrow_release' | 'payout' | 'cancellation_fee' | 'tip' | 'referral_bonus' | 'payout_reversal' | 'fee_release';
   amount: number; // positive credit, negative debit
   at: ISODate;
   note: string;

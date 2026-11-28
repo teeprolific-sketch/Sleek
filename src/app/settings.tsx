@@ -61,7 +61,7 @@ export default function Settings() {
             ))}
           </Card>
           <Txt v="small" muted style={{ marginTop: 6 }}>
-            Addresses are only shared with an artisan after you fund escrow for a job.
+            Addresses are only shared with an artisan after you pay into Sleek Hold for a job.
           </Txt>
         </Section>
       ) : null}

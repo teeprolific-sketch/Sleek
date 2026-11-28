@@ -58,7 +58,7 @@ export default function Notifications() {
           </Pressable>
         ))
       ) : (
-        <EmptyState icon="notifications-outline" title="You’re all caught up" body="Price offers, escrow updates, proof of work and payouts will show here." />
+        <EmptyState icon="notifications-outline" title="You’re all caught up" body="Price offers, Sleek Hold updates, proof of work and payouts will show here." />
       )}
     </Screen>
   );

@@ -171,7 +171,7 @@ export default function Ugent() {
               <Card key={r.artisan_id} style={{ marginTop: space.sm }}>
                 <Txt v="bodyStrong">{r.name}</Txt>
                 <Txt v="small" muted>
-                  ★ {r.rating} · {r.completed_escrow_jobs} escrow jobs · {r.area}
+                  ★ {r.rating} · {r.completed_escrow_jobs} completed jobs · {r.area}
                 </Txt>
                 <Row wrap gap={4} style={{ marginTop: 6 }}>
                   {r.badges.slice(0, 3).map((b) => (

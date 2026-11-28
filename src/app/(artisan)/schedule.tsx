@@ -84,7 +84,7 @@ export default function Schedule() {
             )}
           </Section>
           <Txt v="small" muted style={{ marginTop: space.md }}>
-            A slot is only blocked once escrow is funded. Several jobs a day are fine as long as times don’t overlap (30-minute travel gap).
+            A slot is only blocked once the customer pays into Sleek Hold. Several jobs a day are fine as long as times don’t overlap (30-minute travel gap).
           </Txt>
         </>
       ) : null}
@@ -151,7 +151,7 @@ export default function Schedule() {
             })}
           </View>
           <Row wrap gap={space.md} style={{ marginTop: space.md }}>
-            <Legend color={c.primary} label="Booked (escrow funded)" />
+            <Legend color={c.primary} label="Booked (paid into Sleek Hold)" />
             <Legend color="transparent" border={c.primary} label="Request, not yet paid" />
             <Legend color={c.card} border={c.border} label="Working hours" />
             <Legend color={c.warningSoft} label="Time off" />

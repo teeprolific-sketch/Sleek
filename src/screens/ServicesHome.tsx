@@ -3,7 +3,6 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Banner, Card, Chip, Icon, IconButton, Pill, Row, Screen, Segmented, Spacer, Txt } from '../components/ui';
 import { categoryName } from '../data/categories';
-import { SERVICE_ITEMS } from '../data/seed';
 import type { ServiceItemKind } from '../domain/types';
 import { useStore } from '../store';
 import { radius, space, useTheme } from '../theme';
@@ -20,20 +19,23 @@ export default function ServicesHome() {
   const job = useStore((s) => s.jobs.find((j) => j.id === params.jobId));
   const [kind, setKind] = useState<ServiceItemKind>('product');
   const [group, setGroup] = useState<string | null>(null);
+  const allProducts = useStore((s) => s.products);
+  const sellers = useStore((s) => s.sellers);
+  const SERVICE_ITEMS = useMemo(() => allProducts.filter((p) => p.status !== 'unlisted' && !sellers.find((x) => x.id === p.sellerId)?.suspended), [allProducts, sellers]);
 
-  const groups = useMemo(() => [...new Set(SERVICE_ITEMS.filter((i) => i.kind === kind).map((i) => i.group))], [kind]);
+  const groups = useMemo(() => [...new Set(SERVICE_ITEMS.filter((i) => i.kind === kind).map((i) => i.group))], [kind, SERVICE_ITEMS]);
   const items = useMemo(() => {
     let list = SERVICE_ITEMS.filter((i) => i.kind === kind && (!group || i.group === group));
     if (params.categoryId) list = [...list].sort((a, b) => Number(b.relatedCategoryIds.includes(params.categoryId!)) - Number(a.relatedCategoryIds.includes(params.categoryId!)));
     return list;
-  }, [kind, group, params.categoryId]);
+  }, [kind, group, params.categoryId, SERVICE_ITEMS]);
 
   return (
     <Screen title="Sleek Services" subtitle="Tools, materials & rentals" back={!!params.jobId} right={<IconButton icon="cart-outline" label="Cart" badge={cartCount} onPress={() => router.push({ pathname: '/cart', params: { jobId: params.jobId ?? '' } })} />}>
       {job ? (
         <Banner tone="primary" icon="link-outline" title={`For your job: ${job.title}`} body={`Showing items useful for ${categoryName(job.categoryId)} first. You can deliver straight to your artisan.`} />
       ) : (
-        <Banner tone="primary" icon="pricetag-outline" body="Partner prices from verified vendors. Delivery to you or to your artisan." />
+        <Banner tone="primary" icon="pricetag-outline" body="Verified sellers, protected payment, and a Sleek rider delivers to you or your artisan." />
       )}
       <Spacer />
       <Segmented value={kind} onChange={(k) => { setKind(k); setGroup(null); }} options={[{ value: 'product', label: 'Shop tools & materials' }, { value: 'rental', label: 'Rentals' }]} />

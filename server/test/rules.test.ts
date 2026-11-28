@@ -165,11 +165,11 @@ describe('trust rules on the server', () => {
     assert.equal((await h.call('POST', '/v1/verification/skills', a, { categoryId: 'cleaner', mediaId: short, durationSec: 10 })).status, 422);
     const vid = await upload(h, a, 'skill_video', undefined, 'video/mp4');
     const sk = await h.call('POST', '/v1/verification/skills', a, { categoryId: 'cleaner', mediaId: vid, durationSec: 60 });
-    assert.equal(sk.body.status, 'in_review');
+    assert.equal(sk.body.status, 'approved', 'a video that passes every automated check goes live immediately');
+    assert.equal((await h.call('POST', '/v1/artisan/online', a, { online: true })).body.online, true, 'the dashboard is live straight away');
     const queue = await h.call('GET', '/v1/admin/verifications', admin);
-    assert.ok(queue.body.some((q: any) => q.artisanId === reg.body.userId));
+    assert.ok(queue.body.some((q: any) => q.artisanId === reg.body.userId), 'the Trust team still audits it afterwards');
     assert.equal((await h.call('POST', '/v1/admin/verifications/decision', admin, { artisanId: reg.body.userId, categoryId: 'cleaner', decision: 'approved', quality: 4 })).status, 200);
-    assert.equal((await h.call('POST', '/v1/artisan/online', a, { online: true })).body.online, true);
     // a second account with the same NIN is refused
     const otp2 = await h.call('POST', '/v1/auth/otp', undefined, { phone: '07031234568' });
     const ver2 = await h.call('POST', '/v1/auth/verify', undefined, { phone: '07031234568', code: otp2.body.devCode });

@@ -19,7 +19,7 @@ export interface Stage {
 export const STAGE_LABEL: Record<StageKey, string> = {
   requested: 'Requested',
   price_agreed: 'Price agreed',
-  booked: 'Booked · escrow funded',
+  booked: 'Booked · paid into Sleek Hold',
   en_route: 'Artisan en route',
   started: 'Work started',
   proof: 'Proof submitted',
@@ -70,7 +70,7 @@ export function jobTimeline(job: Job): TimelineResult {
       : job.status === 'declined'
         ? { reason: 'declined' as const, label: 'Declined by artisan' }
         : job.status === 'disputed'
-          ? { reason: 'disputed' as const, label: 'In dispute — escrow frozen while Sleek reviews' }
+          ? { reason: 'disputed' as const, label: 'In dispute — Sleek Hold frozen while Sleek reviews' }
           : job.status === 'resolved'
             ? { reason: 'resolved' as const, label: 'Dispute resolved by Sleek' }
             : undefined;

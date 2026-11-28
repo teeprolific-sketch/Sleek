@@ -108,7 +108,7 @@ export async function createJob(deps: Deps, s: Session, input: CreateJobInput): 
       origin: input.origin ?? 'app',
     };
     await insertJob(deps, job, c);
-    await systemMessage(deps, job.id, 'Chat is protected by Sleek. Phone numbers, emails, links and off-app contact are blocked. Your exact address is shared only after you fund escrow.', c);
+    await systemMessage(deps, job.id, 'Chat is protected by Sleek. Phone numbers, emails, links and off-app contact are blocked. Your exact address is shared only after you pay into Sleek Hold.', c);
     for (const m of issuePhotos) await insertMessage(deps, { jobId: job.id, from: 'customer', kind: 'media', text: 'Photo of the issue', media: m }, c);
     await notify(deps, artisan.id, 'New job request', `${customer.name} needs ${categoryName(input.categoryId)} — ${job.title}.`, `/chat/${job.id}`, c);
     return job;
@@ -205,7 +205,7 @@ export async function acceptPrice(deps: Deps, s: Session, jobId: string) {
     job.size = Esc.classifyJobSize(amount, job.window.start, job.window.end, category(job.categoryId).defaultSize);
     addTimeline(deps, job, `Price locked at ${naira(amount)}`, party);
     await saveJob(deps, job, c);
-    await systemMessage(deps, jobId, `Price locked at ${naira(amount)}. This is now permanent for this job. Next: the customer pays into Sleek Escrow.`, c);
+    await systemMessage(deps, jobId, `Price locked at ${naira(amount)}. This is now permanent for this job. Next: the customer pays into Sleek Hold.`, c);
     await notify(deps, party === 'customer' ? job.artisanId : job.customerId, 'Price agreed', `${naira(amount)} locked for “${job.title}”.`, `/job/${jobId}`, c);
     return jobView(job, s);
   });
@@ -243,8 +243,8 @@ export async function declineJob(deps: Deps, s: Session, jobId: string, reason: 
 // ---------------------------------------------------------------------------
 export async function initEscrowPayment(deps: Deps, s: Session, jobId: string) {
   const job = await getJob(deps, jobId);
-  if (partyOf(job, s) !== 'customer') throw forbidden('Only the customer can fund escrow.');
-  if (!Esc.canFund(job)) throw ruleViolation('Agree a price in the Price Pool before paying into escrow.', 'cannot_fund');
+  if (partyOf(job, s) !== 'customer') throw forbidden('Only the customer can pay into Sleek Hold.');
+  if (!Esc.canFund(job)) throw ruleViolation('Agree a price in the Price Pool before paying into Sleek Hold.', 'cannot_fund');
   const artisan = await getArtisan(deps, job.artisanId);
   const others = await capacityJobs(deps, [artisan.id]);
   if (!pickWorker(artisan, others, job)) throw ruleViolation('This artisan was just booked for an overlapping time. Please choose another time.', 'slot_taken');
@@ -323,7 +323,7 @@ export async function handleChargeSuccess(deps: Deps, reference: string, paidAmo
     addTimeline(deps, job, `${naira(job.escrow.amount)} paid into Sleek Escrow`, 'customer');
     await saveJob(deps, job, c);
     await systemMessage(deps, job.id, `Escrow funded: ${naira(job.escrow.amount)} is held safely by Sleek. The job address is now shared with the artisan.`, c);
-    await notify(deps, artisan.id, 'Escrow funded — job confirmed', `${naira(job.escrow.amount)} is held for “${job.title}”. Address unlocked.`, `/job/${job.id}`, c);
+    await notify(deps, artisan.id, 'Paid into Sleek Hold — job confirmed', `${naira(job.escrow.amount)} is held for “${job.title}”. Address unlocked.`, `/job/${job.id}`, c);
     await notify(deps, job.customerId, 'Payment secured', `${naira(job.escrow.amount)} is held in escrow for “${job.title}”.`, `/job/${job.id}`, c);
     await audit(deps, job.customerId, 'escrow.funded', job.id, { reference, amount: paidAmount }, c);
     return 'funded';
@@ -374,7 +374,7 @@ export async function assignWorker(deps: Deps, s: Session, jobId: string, worker
 export async function startJob(deps: Deps, s: Session, jobId: string) {
   return withJob(deps, jobId, async (job, c) => {
     if (partyOf(job, s) !== 'artisan') throw forbidden('Only the artisan can start the job.');
-    if (!Esc.canStart(job, deps.now())) throw ruleViolation('You can start from 1 hour before the agreed time, once escrow is funded.', 'cannot_start');
+    if (!Esc.canStart(job, deps.now())) throw ruleViolation('You can start from 1 hour before the agreed time, once Sleek Hold is funded.', 'cannot_start');
     job.status = 'in_progress';
     job.startedAt = iso(deps);
     addTimeline(deps, job, 'Artisan started work', 'artisan');
@@ -560,7 +560,7 @@ export async function openDispute(deps: Deps, s: Session, jobId: string, reason:
   if (!dm.allowed) throw ruleViolation(dm.warning!, 'message_blocked', { violations: dm.violations });
   return withJob(deps, jobId, async (job, c) => {
     const party = partyOf(job, s);
-    if (!Esc.canDispute(job)) throw ruleViolation('Disputes can be opened while money is held in escrow.', 'cannot_dispute');
+    if (!Esc.canDispute(job)) throw ruleViolation('Disputes can be opened while money is held in Sleek Hold.', 'cannot_dispute');
     const evidence = await claimMedia(deps, c, s.userId, evidenceMediaIds, ['dispute_evidence']);
     const d: Dispute = { id: newId('dsp'), jobId, openedBy: party, reason, details: details.trim(), evidence, status: 'open', openedAt: iso(deps) };
     await deps.db.query('INSERT INTO disputes (id, job_id, status, data) VALUES ($1, $2, $3, $4)', [d.id, jobId, d.status, JSON.stringify(d)], c);
@@ -574,7 +574,7 @@ export async function openDispute(deps: Deps, s: Session, jobId: string, reason:
       a.stats = { ...a.stats, disputesOpened: a.stats.disputesOpened + 1 };
       await saveUser(deps, a, c);
     }
-    await systemMessage(deps, jobId, 'A dispute has been opened. The money stays in escrow until Sleek reviews the chat history and proof of work. This usually takes 1–3 working days.', c);
+    await systemMessage(deps, jobId, 'A dispute has been opened. The money stays in Sleek Hold until Sleek reviews the chat history and proof of work. This usually takes 1–3 working days.', c);
     await notify(deps, party === 'customer' ? job.artisanId : job.customerId, 'Dispute opened', `A dispute was opened on “${job.title}”. Add your side of the story.`, `/dispute/${jobId}`, c);
     for (const id of await adminIds(deps)) await notify(deps, id, 'New dispute', `${job.title} — ${naira(job.escrow.amount)} frozen`, `/resolve/${d.id}`, c);
     return d;

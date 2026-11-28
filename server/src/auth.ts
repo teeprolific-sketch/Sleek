@@ -62,7 +62,7 @@ export async function verifyOtp(deps: Deps, rawPhone: string, code: string) {
   const user = await findUserByPhone(deps, phone);
   if (user) {
     if (user.suspended) throw forbidden('This account is suspended. Contact support.');
-    return { token: sign({ sub: user.id, role: user.role, scope: 'user' }, deps.cfg.jwtSecret, SESSION_TTL, deps.now()), role: user.role, userId: user.id };
+    return { token: sign({ sub: user.id, role: user.role as Session['role'], scope: 'user' }, deps.cfg.jwtSecret, SESSION_TTL, deps.now()), role: user.role as Session['role'], userId: user.id };
   }
   return { registrationToken: sign({ sub: phone, phone, scope: 'register' }, deps.cfg.jwtSecret, 30 * 60, deps.now()) };
 }

@@ -15,8 +15,8 @@ const SLIDES = [
   },
   {
     icon: 'lock-closed',
-    title: 'Your money stays in escrow',
-    body: 'Agree a price in chat, pay into Sleek Escrow, and release it only when you are happy with the work.',
+    title: 'Your money stays in Sleek Hold',
+    body: 'Agree a price in chat, pay into Sleek Hold, and release it only when you are happy with the work.',
   },
   {
     icon: 'chatbubbles',

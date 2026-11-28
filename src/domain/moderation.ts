@@ -220,8 +220,8 @@ const WARNINGS: Record<ViolationType, string> = {
   phone_number: 'Phone numbers can’t be shared on Sleek — in any form, even split across messages. Agree prices in the Price Pool.',
   email: 'Email addresses can’t be shared on Sleek.',
   link: 'Links can’t be shared in chat.',
-  off_app: 'Please keep the conversation inside Sleek. Moving off the app removes your escrow protection.',
-  off_app_payment: 'All payments must go through Sleek Escrow. Direct payments are not protected and are not allowed.',
+  off_app: 'Please keep the conversation inside Sleek. Moving off the app removes your Sleek Hold protection.',
+  off_app_payment: 'All payments must go through Sleek Hold. Direct payments are not protected and are not allowed.',
 };
 
 /** A message that is mostly digits or number words — the kind used to leak a number piece by piece. */

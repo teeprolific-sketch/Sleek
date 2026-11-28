@@ -16,7 +16,7 @@ export default function Referrals() {
   const code = makeReferralCode(user.name, user.id);
   const earned = mine.filter((r) => r.status === 'qualified').reduce((s, r) => s + r.reward, 0);
   const pending = mine.filter((r) => r.status === 'pending').reduce((s, r) => s + r.reward, 0);
-  const message = `Join me on Sleek — verified artisans, and your money stays in escrow until the job is done. Use my code ${code} when you sign up: https://sleek.ng/r/${code}`;
+  const message = `Join me on Sleek — verified artisans, and your money stays in Sleek Hold until the job is done. Use my code ${code} when you sign up: https://sleek.ng/r/${code}`;
 
   const share = async () => {
     try {
@@ -65,9 +65,9 @@ export default function Referrals() {
       ) : null}
 
       <Section title="How it works">
-        <Steps current={-1} steps={['Share your code', 'They sign up and enter it', `A customer completes ${QUALIFY_AFTER_JOBS.customer} escrow job, or an artisan completes ${QUALIFY_AFTER_JOBS.artisan}`, 'You both get rewarded']} />
+        <Steps current={-1} steps={['Share your code', 'They sign up and enter it', `A customer completes ${QUALIFY_AFTER_JOBS.customer} Sleek Hold job, or an artisan completes ${QUALIFY_AFTER_JOBS.artisan}`, 'You both get rewarded']} />
         <Txt v="small" muted style={{ marginTop: space.sm }}>
-          Rewards only count for real, completed escrow jobs — so fake accounts never earn anything.
+          Rewards only count for real, completed Sleek Hold jobs — so fake accounts never earn anything.
         </Txt>
       </Section>
 
@@ -84,7 +84,7 @@ export default function Referrals() {
                 </View>
                 <Pill label={r.status === 'qualified' ? `+${naira(r.reward)}` : 'Pending'} tone={r.status === 'qualified' ? 'success' : 'warning'} />
               </Row>
-              {r.status === 'pending' ? <KeyValue k="Needs" v={`${QUALIFY_AFTER_JOBS[r.refereeRole]} completed escrow job(s)`} /> : null}
+              {r.status === 'pending' ? <KeyValue k="Needs" v={`${QUALIFY_AFTER_JOBS[r.refereeRole]} completed Sleek Hold job(s)`} /> : null}
             </Card>
           ))
         ) : (

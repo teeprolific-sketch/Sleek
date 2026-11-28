@@ -53,7 +53,7 @@ export default function RateJob() {
       <Spacer h={space.lg} />
       <Field multiline label="Tell others about the job (optional)" value={comment} onChangeText={setComment} placeholder="What went well? Anything to improve?" />
       <Txt v="small" muted>
-        Reviews can only be left for completed escrow jobs, so every review on Sleek is real.
+        Reviews can only be left for completed Sleek Hold jobs, so every review on Sleek is real.
       </Txt>
     </Screen>
   );

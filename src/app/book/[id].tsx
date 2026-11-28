@@ -6,6 +6,8 @@ import { Banner, Button, Card, Chip, EmptyState, Field, Icon, Row, Screen, Secti
 import { category } from '../../data/categories';
 import { suggestSlots } from '../../domain/availability';
 import { moderateMessage } from '../../domain/moderation';
+import { FEE_HELP, FEE_LABEL, feeFor } from '../../domain/fees';
+import { naira } from '../../utils/format';
 import type { CapturedMedia, TimeWindow } from '../../domain/types';
 import { useMyCustomer, useStore } from '../../store';
 import { radius, space, useTheme } from '../../theme';
@@ -36,6 +38,8 @@ export default function Book() {
   const [photos, setPhotos] = useState<CapturedMedia[]>([]);
   const [error, setError] = useState<string | null>(null);
   const cat = category(categoryId);
+  const tradeFeeTypes = useStore((s) => s.platformConfig?.tradeFeeTypes);
+  const fee = feeFor(artisan ?? { fees: undefined }, categoryId, tradeFeeTypes);
 
   const slots = useMemo(() => {
     if (!artisan) return [];
@@ -59,18 +63,20 @@ export default function Book() {
     if (!mod.allowed) return setError(mod.warning!);
     const res = createJob({ artisanId: artisan.id, categoryId, title, description: desc, window: slot, addressIndex, issuePhotos: photos });
     if (!res.ok) return showMessage('Could not send request', res.error);
-    router.replace({ pathname: '/chat/[id]', params: { id: res.value } });
+    router.replace({ pathname: '/fee/[id]', params: { id: res.value } });
   };
 
   return (
-    <Screen title={`Request ${cat.name}`} subtitle={artisan.businessName ?? artisan.name} footer={<Button title="Send request & open chat" icon="send" onPress={submit} />}>
+    <Screen title={`Request ${cat.name}`} subtitle={artisan.businessName ?? artisan.name} footer={<Button title={`Continue · ${FEE_LABEL[fee.type].toLowerCase()} ${naira(fee.amount)}`} icon="arrow-forward" onPress={submit} />}>
+      <Banner tone="primary" icon="cash-outline" title={`${FEE_LABEL[fee.type]}: ${naira(fee.amount)}`} body={`${FEE_HELP[fee.type]} You pay it before ${artisan.businessName ?? artisan.name.split(' ')[0]} engages. It waits in Sleek Hold and comes back to you if they decline or don’t reply.`} />
+      <View style={{ height: space.md }} />
       {rebook ? (
         <View style={{ marginBottom: space.md }}>
           <Banner tone="success" icon="repeat-outline" title={`Booking ${artisan.businessName ?? artisan.name.split(' ')[0]} again`} body="We’ve copied the details from your last job. Change anything you need, then pick a time." />
         </View>
       ) : null}
       <Field label="Job title" placeholder={`e.g. ${cat.id === 'mechanic' ? 'Car brakes squeaking' : cat.name + ' needed'}`} value={title} onChangeText={setTitle} />
-      <Field label="What do you need?" placeholder="Describe the job, size, and anything the artisan should know." value={desc} onChangeText={setDesc} multiline hint="Don’t include phone numbers or addresses — Sleek shares your address after you pay into escrow." />
+      <Field label="What do you need?" placeholder="Describe the job, size, and anything the artisan should know." value={desc} onChangeText={setDesc} multiline hint="Don’t include phone numbers or addresses — Sleek shares your address after you pay into Sleek Hold." />
 
       <Section title="Photo of the issue (optional)" style={{ marginTop: 4 }}>
         <ScrollView horizontal contentContainerStyle={{ gap: 8 }}>
@@ -126,7 +132,7 @@ export default function Book() {
             </Row>
           </Card>
         ))}
-        <Banner tone="primary" icon="eye-off-outline" body={`The artisan only sees “${me.addresses[addressIndex]?.area ?? me.area}” until you fund escrow. Then the full address is unlocked.`} />
+        <Banner tone="primary" icon="eye-off-outline" body={`The artisan only sees “${me.addresses[addressIndex]?.area ?? me.area}” until you pay into Sleek Hold. Then the full address is unlocked.`} />
       </Section>
       {error ? (
         <View style={{ marginTop: space.lg }}>

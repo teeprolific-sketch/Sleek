@@ -10,6 +10,7 @@ import { availabilityNow } from '../../domain/availability';
 import { rankScore } from '../../domain/ranking';
 import { displayRating, identityVerified, trustScore } from '../../domain/trust';
 import { SKILL_STATUS_LABEL } from '../../domain/verification';
+import { FEE_LABEL, feeFor } from '../../domain/fees';
 import { useStore } from '../../store';
 import { space, useTheme } from '../../theme';
 import { day, naira } from '../../utils/format';
@@ -18,6 +19,7 @@ export default function ArtisanProfile() {
   const { c } = useTheme();
   const { id, categoryId } = useLocalSearchParams<{ id: string; categoryId?: string }>();
   const artisan = useStore((s) => s.artisans.find((a) => a.id === id));
+  const tradeFeeTypes = useStore((s) => s.platformConfig?.tradeFeeTypes);
   const jobs = useStore((s) => s.jobs);
   const allReviews = useStore((s) => s.reviews);
   const role = useStore((s) => s.session.role);
@@ -77,7 +79,7 @@ export default function ArtisanProfile() {
         <BadgeRow artisan={artisan} />
       </View>
       <Row gap={space.sm} style={{ marginTop: space.lg }}>
-        <Stat label="Escrow jobs done" value={String(artisan.stats.completedJobs)} icon="checkmark-done-outline" />
+        <Stat label="Sleek Hold jobs done" value={String(artisan.stats.completedJobs)} icon="checkmark-done-outline" />
         <Stat label="Trust score" value={`${trustScore(artisan, now)}`} icon="shield-checkmark-outline" />
         <Stat label="On time" value={`${Math.round(artisan.stats.onTimeRate * 100)}%`} icon="time-outline" />
       </Row>
@@ -104,7 +106,12 @@ export default function ArtisanProfile() {
                   </Txt>
                 </View>
               </Row>
-              <Txt v="bodyStrong">{artisan.startingPrices[cid] ? `from ${naira(artisan.startingPrices[cid])}` : ''}</Txt>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Txt v="bodyStrong">{artisan.startingPrices[cid] ? `from ${naira(artisan.startingPrices[cid])}` : ''}</Txt>
+                <Txt v="tiny" muted>
+                  {FEE_LABEL[feeFor(artisan, cid, tradeFeeTypes).type]} {naira(feeFor(artisan, cid, tradeFeeTypes).amount)}
+                </Txt>
+              </View>
             </Row>
             {role === 'customer' ? (
               <Button small variant="secondary" title="Request this service" style={{ marginTop: space.md }} onPress={() => router.push({ pathname: '/book/[id]', params: { id: artisan.id, categoryId: cid } })} />
@@ -163,13 +170,13 @@ export default function ArtisanProfile() {
                 <Stars value={r.rating} size={12} />
               </Row>
               <Txt v="small" muted>
-                {categoryName(r.categoryId)} · {day(r.at)} · Verified escrow job
+                {categoryName(r.categoryId)} · {day(r.at)} · Verified Sleek Hold job
               </Txt>
               <Txt style={{ marginTop: 4 }}>{r.comment}</Txt>
             </View>
           ))
         ) : (
-          <Txt muted>No reviews yet. Reviews come only from completed escrow jobs.</Txt>
+          <Txt muted>No reviews yet. Reviews come only from jobs paid through Sleek Hold.</Txt>
         )}
       </Section>
       <View style={{ marginTop: space.lg }}>

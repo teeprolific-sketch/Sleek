@@ -67,7 +67,7 @@ export function NetworkBanner() {
   );
 }
 
-/** "Escrow Protected" badge shown on every job. */
+/** "Sleek Hold Protected" badge shown on every job. */
 export function EscrowBadge({ job, compact }: { job: Job; compact?: boolean }) {
   const { c } = useTheme();
   const t = useT();

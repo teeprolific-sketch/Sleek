@@ -77,14 +77,14 @@ describe('job start', () => {
 });
 
 describe('release & commission', () => {
-  it('takes 10% commission (8% for Trusted)', () => {
-    expect(commissionFor(20000, false)).toEqual({ commission: 2000, payout: 18000 });
-    expect(commissionFor(20000, true)).toEqual({ commission: 1600, payout: 18400 });
+  it('takes a flat 20% commission', () => {
+    expect(commissionFor(20000, false)).toEqual({ commission: 4000, payout: 16000 });
+    expect(commissionFor(20000, true)).toEqual({ commission: 4000, payout: 16000 });
   });
 
   it('releases to artisan minus commission', () => {
     const e = release({ state: 'held', amount: 50000 }, false, 'customer_approved', 'now');
-    expect(e).toMatchObject({ state: 'released', releasedToArtisan: 45000, commission: 5000 });
+    expect(e).toMatchObject({ state: 'released', releasedToArtisan: 40000, commission: 10000 });
   });
 
   it('auto-release windows are 24/48/72h', () => {
@@ -148,7 +148,7 @@ describe('cancellation policy', () => {
 describe('dispute resolution', () => {
   it('splits escrow and charges commission only on the artisan share', () => {
     const e = resolveDisputeEscrow({ state: 'frozen', amount: 40000 }, 0.5, false, 'now');
-    expect(e).toMatchObject({ state: 'partially_refunded', refundedToCustomer: 20000, releasedToArtisan: 18000, commission: 2000 });
+    expect(e).toMatchObject({ state: 'partially_refunded', refundedToCustomer: 20000, releasedToArtisan: 16000, commission: 4000 });
   });
   it('full refund', () => {
     expect(resolveDisputeEscrow({ state: 'frozen', amount: 40000 }, 0, false, 'now')).toMatchObject({ state: 'refunded', refundedToCustomer: 40000, releasedToArtisan: 0 });

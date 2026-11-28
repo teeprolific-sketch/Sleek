@@ -37,7 +37,7 @@ export default function DisputeScreen() {
       });
     return (
       <Screen title="Open a dispute" subtitle={job.title} footer={<Button variant="danger" title="Submit dispute" icon="flag-outline" onPress={submit} />}>
-        <Banner tone="primary" icon="shield-checkmark-outline" body="Your money stays safely in escrow. A Sleek reviewer reads the full in-app chat, the agreed price and all logged photos before deciding." />
+        <Banner tone="primary" icon="shield-checkmark-outline" body="Your money stays safely in Sleek Hold. A Sleek reviewer reads the full in-app chat, the agreed price and all logged photos before deciding." />
         <Section title="What went wrong?">
           <Row wrap gap={8}>
             {DISPUTE_REASONS.map((r) => (
@@ -69,7 +69,7 @@ export default function DisputeScreen() {
   return (
     <Screen title="Dispute" subtitle={job.title} right={<Pill label={dispute.status.replace('_', ' ')} tone={dispute.status === 'resolved' ? 'success' : 'danger'} />}>
       <Card>
-        <Steps current={step} steps={['Dispute opened — escrow frozen', 'Sleek is reviewing chat & proof of work', 'Decision & payout']} />
+        <Steps current={step} steps={['Dispute opened — Sleek Hold frozen', 'Sleek is reviewing chat & proof of work', 'Decision & payout']} />
       </Card>
       <Section title="Case">
         <Card>

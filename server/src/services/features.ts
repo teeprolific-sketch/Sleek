@@ -44,7 +44,7 @@ const tl = (deps: Deps, j: Job, label: string, by: Job['timeline'][number]['by']
 export async function markEnRoute(deps: Deps, s: Session, jobId: string) {
   return deps.db.tx(async (c) => {
     const job = await lockedJobFor(deps, c, s, jobId, 'artisan');
-    if (!canMarkEnRoute(job, deps.now())) throw ruleViolation('You can mark “on my way” from 3 hours before the job, once escrow is funded.', 'cannot_en_route');
+    if (!canMarkEnRoute(job, deps.now())) throw ruleViolation('You can mark “on my way” from 3 hours before the job, once Sleek Hold is funded.', 'cannot_en_route');
     job.enRouteAt = iso(deps);
     tl(deps, job, 'Artisan is on the way', 'artisan');
     await saveJob(deps, job, c);

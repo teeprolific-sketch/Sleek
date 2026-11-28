@@ -8,9 +8,9 @@ import { useMyArtisan, useStore } from '../store';
 import { space, useTheme } from '../theme';
 
 const RULES = [
-  { icon: 'lock-closed-outline', title: 'Escrow for every job', body: 'Customers pay Sleek, not the artisan. Money is released only after the customer approves the proof of work — or automatically if they don’t respond.' },
+  { icon: 'lock-closed-outline', title: 'Sleek Hold for every job', body: 'Customers pay Sleek, not the artisan. Money is released only after the customer approves the proof of work — or automatically if they don’t respond.' },
   { icon: 'chatbubbles-outline', title: 'Chat stays in the app', body: 'Phone numbers (in digits or words), emails, links, social handles and requests to pay outside Sleek are blocked before they send. Every attempt is logged.' },
-  { icon: 'location-outline', title: 'Address after payment', body: 'Artisans only see the area until escrow is funded. Then the exact address is unlocked for that job.' },
+  { icon: 'location-outline', title: 'Address after payment', body: 'Artisans only see the area until Sleek Hold is funded. Then the exact address is unlocked for that job.' },
   { icon: 'finger-print-outline', title: 'Serious verification', body: 'NIN check, random-movement face liveness and face match. Then a separate live video for every single skill, matched to the same face.' },
   { icon: 'camera-outline', title: 'No free uploads', body: 'Photos are taken live for a specific purpose — like “photo of the issue” or “proof of work” — and logged. No gallery uploads, no files.' },
   { icon: 'call-outline', title: 'No calls', body: 'There are no calls on Sleek, and asking for one is treated as an off-app attempt.' },
@@ -55,7 +55,7 @@ export default function TrustSafety() {
               Stay on Sleek, stay protected
             </Txt>
             <Txt v="small" color={c.heroMuted}>
-              Deals made outside the app are not covered by escrow, refunds or dispute resolution.
+              Deals made outside the app are not covered by Sleek Hold, refunds or dispute resolution.
             </Txt>
           </View>
         </Row>
@@ -80,12 +80,12 @@ export default function TrustSafety() {
           <Txt v="small">• Auto-release after proof of work: {AUTO_RELEASE_HOURS.short}h for short jobs, {AUTO_RELEASE_HOURS.normal}h for normal jobs, {AUTO_RELEASE_HOURS.large}h for large jobs.</Txt>
           <Txt v="small">• Cancel 24h+ before start: full refund. Under 24h: 90% refund, 10% to the artisan.</Txt>
           <Txt v="small">• After work starts: no cancellation — open a dispute.</Txt>
-          <Txt v="small">• Sleek commission: {Math.round(COMMISSION_RATE * 100)}% from the artisan’s payout (8% for Trusted artisans). Customers pay no fee.</Txt>
+          <Txt v="small">• Sleek commission: {Math.round(COMMISSION_RATE * 100)}% from the artisan’s payout. Customers pay no fee.</Txt>
         </Card>
       </Section>
       <Section title="How trust works">
         <Txt v="small" muted>
-          Completed escrow jobs and good reviews raise an artisan’s ranking and unlock the Trusted badge. Cancelling funded jobs, losing disputes and trying to move customers off the app lower it — and repeated attempts lead to suspension.
+          Completed jobs paid through Sleek Hold and good reviews raise an artisan’s ranking and unlock the Trusted badge. Cancelling funded jobs, losing disputes and trying to move customers off the app lower it — and repeated attempts lead to suspension.
         </Txt>
         {artisan || violations ? (
           <View style={{ marginTop: space.md }}>
